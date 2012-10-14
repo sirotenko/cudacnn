@@ -1,24 +1,16 @@
-#include "tests_common.h"
+#include "precomp.h"
 
-class PLayerPropagateTest : public ::testing::Test {
+class PLayerPropagateTest : public CUDATest {
 protected:
 	TensorGPUFloat inputs, weights, biases;
 	virtual void SetUp()
 	{
-		int deviceCount;
-		cudaGetDeviceCount(&deviceCount);
-		ASSERT_TRUE(deviceCount > 0);
-		cudaDeviceProp deviceProp;
-		cudaGetDeviceProperties(&deviceProp, 0);
-		ASSERT_TRUE(deviceProp.major >= 1);
-
-
+		CUDATest::SetUp();
 	}
 	virtual void TearDown()
 	{
+
 	}
-
-
 };
 
 TEST_F(PLayerPropagateTest, PropagateOnes)
@@ -86,6 +78,7 @@ TEST_F(PLayerPropagateTest, PropagateRandomSimple)
 	for (unsigned i = 0; i < biasesHost.num_elements(); ++i)	{
 		biasesHost[i] = float(rand())/RAND_MAX;
 	}
+
 	inputs = inputsHost;
 	weights = weightsHost;
 	biases = biasesHost;

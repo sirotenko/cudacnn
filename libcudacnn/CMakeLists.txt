@@ -1,17 +1,14 @@
 project(cudacnnlib)
 
-set(the_target "cudacnnlib")
+set(the_target "cudacnn")
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
-					"${CMAKE_CURRENT_SOURCE_DIR}/src"
-					"${CMAKE_CURRENT_BINARY_DIR}")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
 file(GLOB lib_srcs "src/*.cpp")
 file(GLOB lib_cuda "src/cuda/*.cu*")
 
-source_group("Src\\Host" FILES ${lib_srcs})
+source_group("Src\\" FILES ${lib_srcs})
 source_group("Src\\Cuda" FILES ${lib_cuda})
-
-file(GLOB lib_hdrs "include/*.h*")
+file(GLOB lib_hdrs "../include/*.h*")
 source_group("Include" FILES ${lib_hdrs})
 
 if (HAVE_CUDA)		
@@ -19,20 +16,13 @@ if (HAVE_CUDA)
 	
 	if (UNIX OR APPLE)
 		set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}  "-Xcompiler;-fPIC;")
-		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" "-fPIC")
 	endif()
-
-	#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-keep")
-	#set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}  "-Xcompiler;/EHsc-;")
 
 	string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 	string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 	string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 
 	if(MSVC)
-		#string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-		#string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-		#string(REPLACE "/W4" "/W3" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4211 /wd4201 /wd4100 /wd4505 /wd4408")
 
 		string(REPLACE "/EHsc-" "/EHs" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
@@ -44,13 +34,13 @@ if (HAVE_CUDA)
 	endif()
 
 	CUDA_COMPILE(cuda_objs ${lib_cuda})
-	#CUDA_BUILD_CLEAN_TARGET()
-endif()
-if(HDF5_FOUND)
-	include_directories(${HDF5_INCLUDE_DIRS})	
 endif()
 
-add_library(${the_target} ${lib_srcs} ${lib_hdrs} ${lib_cuda} ${cuda_objs})
+if(CUDACNN_BUILD_SHARED_LIB)
+	add_library(${the_target} SHARED ${lib_srcs} ${lib_cuda} ${lib_hdrs} ${cuda_objs})
+else(CUDACNN_BUILD_SHARED_LIB)
+	add_library(${the_target} STATIC ${lib_srcs} ${lib_cuda} ${lib_hdrs} ${cuda_objs})
+endif(CUDACNN_BUILD_SHARED_LIB)
 
 if(PCHSupport_FOUND)
 	set(pch_header ${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp)

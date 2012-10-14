@@ -1,8 +1,30 @@
-#pragma once
+//Copyright (c) 2012, Mikhail Sirotenko <mihail.sirotenko@gmail.com>
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without
+//modification, are permitted provided that the following conditions are met:
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+//DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+//ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #ifndef _LAYER_H
 #define _LAYER_H
-#include "tensor.h"
-#include "transfer_functions.h"
+
+namespace cudacnn
+{
 
 //General Layer for both host and device
 template <template <class> class TT, class T>
@@ -18,7 +40,7 @@ public:
 		eFLayer
 	};
 
-	Layer() : num_hessian_accums_(0)
+	Layer() : num_hessian_accums_(0), is_trainable_(true)
 	{
 		//Derived_from<TT<T>, BTensor<T> >();
 	};
@@ -40,9 +62,10 @@ public:
 	//Weights access
 	virtual const MatT& weights() const {return weights_;};
 	virtual const MatT& biases() const {return biases_;};
+	virtual bool is_trainable() const {return is_trainable_;};
 	//Setters
 	virtual void set_de_dx(const MatT& dedx) { de_dx_ = dedx; };
-	virtual void set_d2e_dx2(const MatT& dedx) { de_dx_ = dedx; };
+	virtual void set_d2e_dx2(const MatT& d2edx2) { d2e_dx2_ = d2edx2; };
 	virtual void InitWeights( void(*weight_init_func)(TT<T>&))
 	{
 		//Apply to weights and biases
@@ -125,6 +148,8 @@ protected:
 	//Number of hessian accumulation calls. This is divider for hessian in averaging
 	UINT num_hessian_accums_;
 	float mu; 
+
+	bool is_trainable_;
 };
 template <template <class> class TT, class T>
 void Layer<TT,T>::PrepareForTraining()
@@ -155,29 +180,31 @@ public:
 		UINT inp_height;
 		UINT kernel_width;
 		UINT kernel_height;
+		bool is_trainable;
 	};
 	typedef TT<T> MainTensorType;
 	virtual typename Layer<TT, T>::eLayerType layer_type() const { return eCLayer;};
 	CLayerT(Params& params)
 	{
-		out_ = TT<T>(params.inp_width - params.kernel_width + 1, params.inp_height - params.kernel_height + 1,  params.noutputs);
+		out_ = MainTensorType(params.inp_width - params.kernel_width + 1, params.inp_height - params.kernel_height + 1,  params.noutputs);
 		input_width_ = params.inp_width;
 		input_height_ = params.inp_height;
 		ninputs_ = params.ninputs;
+		is_trainable_ = params.is_trainable;
 
 		std::vector<UINT> wdims(4);
 		wdims[0] = params.kernel_width;
 		wdims[1] = params.kernel_height;
 		wdims[2] = params.ninputs;
 		wdims[3] = params.noutputs;
-		weights_ = TT<T>(wdims);
+		weights_ = MainTensorType(wdims);
 		biases_ = TT<T>(1, 1, params.noutputs);
 		std::vector<UINT> cdims(2);
 		cdims[0] = params.ninputs;
 		cdims[1] = params.noutputs;
 		con_map_ = TT<int>(cdims);
 	}
-	CLayerT(UINT inp_width, UINT inp_height, 
+	CLayerT(UINT inp_width, UINT inp_height, bool is_trainable,
 		const MainTensorType& weights, const MainTensorType& biases, const TT<int>& con_map)
 	{
 		assert(weights.num_dims() == 4);
@@ -185,6 +212,7 @@ public:
 		input_width_ = inp_width;
 		input_height_ = inp_height;
 		ninputs_ = con_map.w();
+		is_trainable_ = is_trainable;
 
 		weights_ = weights;
 		biases_ = biases;
@@ -209,6 +237,7 @@ class CLayer;
 template <template <class> class TT, class T, class TF>
 void CLayerT<TT,T,TF>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
 {
+	save_load_obj.AddScalar(is_trainable_ ? 1 : 0, "Trainable");
 	save_load_obj.AddString("clayer", "LayerType");
 	save_load_obj.AddScalar(weights().d2(),"NumFMaps");
 	//save_load_obj.AddScalar(out().w(),"OutFMapWidth");
@@ -264,12 +293,13 @@ public:
 	typedef TT<T> MainTensorType;
 	virtual typename Layer<TT, T>::eLayerType layer_type() const { return eFLayer;};
 
-	FLayerT(const MainTensorType& weights, const MainTensorType& biases)
+	FLayerT(const MainTensorType& weights, const MainTensorType& biases, bool is_trainable)
 	{
 		num_neurons_ = weights.w();
 		out_ = MainTensorType(num_neurons_,1,1);   
 		weights_ = weights;
 		biases_ = biases;
+		is_trainable_ = is_trainable;
 	}
 	
 	virtual void Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg);
@@ -285,7 +315,8 @@ class FLayer;
 
 template <template <class> class TT, class T, class TF>
 void FLayerT<TT, T, TF>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
-{
+{	
+	save_load_obj.AddScalar(is_trainable_ ? 1 : 0, "Trainable");
 	save_load_obj.AddString("flayer", "LayerType");
 	save_load_obj.AddArray(weights(),"Weights");
 	save_load_obj.AddArray(biases(),"Biases");
@@ -304,6 +335,8 @@ void FLayerT<TT, T, TF>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load_o
 template <template <class> class TT, class T, class TF>
 void FLayerT<TT, T, TF>::Load(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
 {
+	// FIXME add is_trainable_ to all Load's
+
 	save_load_obj.GetArray(weights_,"Weights");
 	save_load_obj.GetArray(biases_,"Biases");
 	if(dbg){ //Add all data
@@ -350,10 +383,10 @@ public:
 		//Init weights and biases as zero arrays
 		std::vector<UINT> wdims(1);
 		wdims[0] = 0;
-		weights_ = TT<T>(wdims);
-		biases_ = TT<T>(wdims);
+		weights_ = MainTensorType(wdims);
+		biases_ = MainTensorType(wdims);
 
-		out_ = TT<T>(params.inp_width / params.sx, params.inp_height / params.sy, params.ninputs);
+		out_ = MainTensorType(params.inp_width / params.sx, params.inp_height / params.sy, params.ninputs);
 	}
 	UINT sx() const { return sx_; }
 	UINT sy() const { return sy_; }
@@ -380,8 +413,8 @@ class PoolingLayer ;
 template <template <class> class TT, class T>
 void PoolingLayerT<TT, T>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
 {
-	save_load_obj.AddString("pooling", "LayerType");
-	
+	save_load_obj.AddScalar(is_trainable_ ? 1 : 0, "Trainable");
+	save_load_obj.AddString("pooling", "LayerType");	
 	save_load_obj.AddScalar(out().d(),"NumFMaps");
 	//save_load_obj.AddScalar(out().w(),"OutFMapWidth");
 	//save_load_obj.AddScalar(out().h(),"OutFMapHeight");
@@ -443,7 +476,7 @@ void PoolingLayerT<TT, T>::Load(typename Layer<TT,T>::ILoadSaveObject& save_load
 		save_load_obj.GetArray(d2e_db2_, "d2EdB2");
 		save_load_obj.GetArray(d2e_dx2_, "d2EdX2_prev");
 	}
-
+}
 }
 
 #endif 

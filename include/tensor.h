@@ -1,10 +1,31 @@
-#pragma once
+//Copyright (c) 2012, Mikhail Sirotenko <mihail.sirotenko@gmail.com>
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without
+//modification, are permitted provided that the following conditions are met:
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+//DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+//ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #ifndef _TENSOR_H
 #define _TENSOR_H
-#include "exceptions.h"
-//#include <cuda.h>
-#include <vector>
 
+namespace cudacnn
+{
+template <class T> class Tensor;
 template <class T> class TensorGPU;
 
 //Tensor interface
@@ -48,9 +69,14 @@ template<class T>
 unsigned BTensor<T>::num_elements() const
 {
 	std::vector<unsigned>::const_iterator it;
-	unsigned numel = 1;
-	for (it = dims_.begin(); it!= dims_.end(); ++it)	{
-		numel *= *it;
+	unsigned numel;
+	if (dims_.size() == 0) {
+		numel = 0;
+	} else {
+		numel = 1;
+		for (it = dims_.begin(); it!= dims_.end(); ++it)	{
+			numel *= *it;
+		}
 	}
 	return numel;
 }
@@ -277,12 +303,8 @@ inline T  Tensor<T>::operator() (unsigned x, unsigned y, unsigned m, unsigned n)
 template<class T>
 inline T& Tensor<T>::operator() (unsigned x, unsigned y, unsigned n)
 {
-	assert(num_dims() <= 3);
-	//assert(x < w() && y < h() && n < d());
-	if (!(x < w() && y < h() && n < d()))
-	{
-		assert(0);
-	}
+	assert(num_dims() <= 3);	
+	assert(x < w() && y < h() && n < d());
 	return data_[n*w()*h() + x + y*w()];
 }
 
@@ -325,6 +347,10 @@ public:
 	virtual void ZeroMemory();
 	TensorGPU<T>& operator =(const TensorGPU<T>& rhs );
 	TensorGPU<T>& operator =(const Tensor<T>& rhs );
+	inline T& operator [](unsigned idx);
+	inline const T& operator [](unsigned idx) const;
+	inline T& operator() (unsigned x, unsigned y, unsigned n);
+	inline T  operator() (unsigned x, unsigned y, unsigned n) const;
 protected:
 	virtual void Destroy() { if(!shallow_)	DeallocateMemory();};
 	virtual void AllocateMemory();
@@ -424,5 +450,5 @@ TensorGPU<T>& TensorGPU<T>::operator =(const Tensor<T>& rhs )
 	return *this;
 }
 
-
+} //namespace cudacnn
 #endif

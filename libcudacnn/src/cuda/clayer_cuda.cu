@@ -1,26 +1,39 @@
+//Copyright (c) 2012, Mikhail Sirotenko <mihail.sirotenko@gmail.com>
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without
+//modification, are permitted provided that the following conditions are met:
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+//DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+//ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "common.h"
-#include <stdexcept>
+#include "../precomp.hpp"
 
-#include "tensor.h"
+namespace cudacnn
+{
 
-#include "tensor_cuda.h"
-#include "assert.h"
-#include "utils.cuh"
-
-#include "transfer_functions.h"
-#include "layer.hpp"
-#include "clayer_cuda.h"
-
-template CLayer<TensorGPU, float, TansigMod<float> >;
-template CLayer<TensorGPU, float, Tansig<float> >;
-template CLayer<TensorGPU, float, Purelin<float> >;
-template CLayer<TensorGPU, double, TansigMod<double> >;
-template CLayer<TensorGPU, double, Tansig<double> >;
-template CLayer<TensorGPU, double, Purelin<double> >;
+template class CLayer<TensorGPU, float, TansigMod<float> >;
+template class CLayer<TensorGPU, float, Tansig<float> >;
+template class CLayer<TensorGPU, float, Purelin<float> >;
+template class CLayer<TensorGPU, double, TansigMod<double> >;
+template class CLayer<TensorGPU, double, Tansig<double> >;
+template class CLayer<TensorGPU, double, Purelin<double> >;
 
 
-
+#ifdef HAVE_CUDA
 
 template <class T, class TF>
 void CLayer<TensorGPU, T, TF>::AverageHessian()
@@ -395,4 +408,8 @@ void CLayer<TensorGPU, T, TF>::ComputeHessian(const TensorGPU<T>& input)
 {
 	ComputeGradientKernelProxy<true>(input);
 	num_hessian_accums_++;
+}
+
+
+#endif //HAVE_CUDA
 }

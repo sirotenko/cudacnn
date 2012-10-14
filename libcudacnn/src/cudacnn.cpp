@@ -2,17 +2,11 @@
 
 #include "precomp.hpp"
 
-using namespace H5;
+//using namespace H5;
 using namespace std;
 
-
-template <class T>
-inline std::string to_string (const T& t)
+namespace cudacnn
 {
-	std::stringstream ss;
-	ss << t;
-	return ss.str();
-}
 
 void CudaInfo()
 {
@@ -47,5 +41,5 @@ void CudaInfo()
 }
 
 
-
+}
 

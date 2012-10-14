@@ -2,6 +2,9 @@
 #define _TRANSFER_FUNCTIONS_CUH
 #include "transfer_functions.h"
 
+namespace cudacnn
+{
+
 template <class T>
 class TansigModCu //: public TransferFunction<T>
 {
@@ -80,6 +83,8 @@ public:
 		return x*x; 
 	}
 };
+
+}
 
 
 #endif

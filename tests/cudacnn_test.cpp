@@ -1,32 +1,22 @@
-#define CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>
+//#define CRTDBG_MAP_ALLOC
+#include "precomp.h"
 
-#include "tests_common.h"
-
-TEST(CUDATest, CudaDeviceTest)
-{
-	int deviceCount;
-	cudaGetDeviceCount(&deviceCount);
-	ASSERT_TRUE(deviceCount > 0);
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, 0);
-	ASSERT_TRUE(deviceProp.major >= 1);
-	printf("CUDA device found: %s \n",deviceProp.name);
-}
-
+#ifdef HAVE_HDF5
+//FIXME test_mnist_net.h5 does not support tf_params
 TEST(CNNetTest, ReadFromHDF)
 {
 	CNNetCudaF cnnet;
-	cnnet.LoadFromFile("test_mnist_net.h5");
+	cnnet.LoadFromFile("H5_TEST_H5_v2.h5");
 }
-
-
+#endif //HAVE_HDF5
 
 int main(int argc, char **argv) 
 {
+	std::srand(static_cast<unsigned int>(time(0)));
+
   	::testing::InitGoogleTest(&argc, argv);
 	RUN_ALL_TESTS();
+    std::cin.get();
 	
     //_CrtDumpMemoryLeaks();
 	return 0;

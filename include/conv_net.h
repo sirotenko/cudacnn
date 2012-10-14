@@ -1,26 +1,42 @@
+//Copyright (c) 2012, Mikhail Sirotenko <mihail.sirotenko@gmail.com>
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without
+//modification, are permitted provided that the following conditions are met:
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+//DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+//ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #ifndef _CONV_NET_H
 #define _CONV_NET_H
 
-#include <typeinfo.h>
-#include <string>
-#include <sstream>
-#include <exception>
-#include <memory>
-
-#include "cpp/H5Cpp.h"
-#include "hdf5_helper.h"
-#include "performance_functions.h"
-
-#define __CNN_FILE_VERSION 1
-
-using namespace H5;
-
+namespace cudacnn
+{
 
 template< template<class> class T, class ET>
 class CNNet
 {
+
 public:
-    typedef std::tr1::shared_ptr<Layer<T,ET> > LayerPtr;
+#ifdef HAVE_BOOST    
+    typedef boost::shared_ptr<Layer<T,ET> > LayerPtr;
+#else
+    typedef std::shared_ptr<Layer<T,ET> > LayerPtr;
+#endif //HAVE_BOOST    
+
     typedef typename std::vector<LayerPtr>::iterator iterator;
     typedef typename std::vector<LayerPtr>::const_iterator const_iterator;
     typedef typename std::vector<LayerPtr>::reverse_iterator reverse_iterator;
@@ -30,8 +46,12 @@ public:
     int Init(std::vector<LayerPtr>& layers, int ninputs, int inp_width, int inp_height);
     
 //=========================== Network utility methods
+//If hdf5 library unavailable file read and save operations will not work
+//This can be the case if Matlab is used for saving and loading nnet
+#ifdef HAVE_HDF5
 	int LoadFromFile(const std::string& filename);
 	int SaveToFile(const std::string& filename);
+#endif
 //=========================== Simulation
 	//Perform propagation of inputs from the input layer to the output layer
 	//Network must be initialized and inputs loaded
@@ -53,12 +73,12 @@ public:
 	void AverageHessian();
 	//Calculate second derrivative of performance function
 	void ComputePerfSecondDerriv(void);
-	//const T<ET>& out() const { return layers_[nlayers()-1]->out() ;}
+//=========================== Getters  
     const T<ET>& out() const { return layers_.back()->out() ;}
 	size_t nlayers() const { return layers_.size(); };
-	int ninputs() const { return ninputs_; };
-	int input_width() const { return input_width_; };
-	int input_height() const { return input_height_; };
+	UINT ninputs() const { return ninputs_; };
+	UINT input_width() const { return input_width_; };
+	UINT input_height() const { return input_height_; };
     
     LayerPtr operator[](size_t idx)
     {
@@ -77,15 +97,12 @@ public:
     reverse_iterator       rend() {return layers_.rend();}
     const_reverse_iterator rend() const {return layers_.rend();}
 
-    //const std::vector<LayerPtr>& layers() const {return layers_; }
-
-
 protected:
-	//BYTE nlayers_;
+    std::vector<LayerPtr> layers_;
 	BYTE ninputs_;
 	UINT input_width_;
 	UINT input_height_;
-    std::vector<LayerPtr> layers_;
+
 };
 
 template< template<class> class T, class ET>
@@ -102,6 +119,8 @@ int CNNet<T,ET>::Init(std::vector<LayerPtr>& layers, int ninputs, int inp_width,
 
 
 //=========================== Network utility methods
+#ifdef HAVE_HDF5
+
 template< template<class> class T, class ET>
 int CNNet<T, ET>::LoadFromFile(const std::string& filename)
 {
@@ -114,13 +133,15 @@ int CNNet<T, ET>::LoadFromFile(const std::string& filename)
 		if(ver != __CNN_FILE_VERSION)
 			throw std::runtime_error("Unsupported version of CNN file");
 
-		size_t nlayers_ = hdf5Helper::ReadIntAttribute(rootGroup, "nLayers");
+		size_t nlayers_ = hdf5Helper::ReadIntAttribute(rootGroup, "nlayers");
 		ninputs_ = hdf5Helper::ReadIntAttribute(rootGroup, "nInputs");
 		input_width_ = hdf5Helper::ReadIntAttribute(rootGroup, "inputWidth");
 		input_height_ = hdf5Helper::ReadIntAttribute(rootGroup, "inputHeight");
 
 		//Impossible number of layers
 		assert(nlayers_ < INT_MAX);
+
+        layers_.clear();
 
 		for (int i = 0; i < nlayers_; i++)
 		{
@@ -151,6 +172,7 @@ int CNNet<T, ET>::LoadFromFile(const std::string& filename)
 					}
 				case Layer<T, ET>::eCLayer:
 					{
+						bool is_trainable = hdf5Helper::ReadIntAttribute(layerGroup, "Trainable") == 1 ? true : false;
 						int inp_width = hdf5Helper::ReadIntAttribute(layerGroup, "InpWidth");
 						int inp_height = hdf5Helper::ReadIntAttribute(layerGroup, "InpHeight");
 						eTransfFunc tf = (eTransfFunc)hdf5Helper::ReadIntAttribute(layerGroup, "TransferFunc");
@@ -176,6 +198,7 @@ int CNNet<T, ET>::LoadFromFile(const std::string& filename)
 					}
 				case Layer<T, ET>::eFLayer:
 					{
+						bool is_trainable = hdf5Helper::ReadIntAttribute(layerGroup, "Trainable") == 1 ? true : false;
 						eTransfFunc tf = (eTransfFunc)hdf5Helper::ReadIntAttribute(layerGroup, "TransferFunc");
 						Tensor<ET> weights, biases;
 
@@ -239,6 +262,7 @@ int CNNet<T, ET>::LoadFromFile(const std::string& filename)
 template< template<class> class T, class ET>
 int CNNet<T,ET>::SaveToFile(const std::string& filename)
 {
+    /*
 	try
 	{
 		Exception::dontPrint();
@@ -286,14 +310,17 @@ int CNNet<T,ET>::SaveToFile(const std::string& filename)
 		return -1;
 	}
 	return 1;
+    */
 }
+
+#endif
 
 //=========================== Simulation
 //Perform propagation of inputs from the input layer to the output layer
 template< template<class> class T, class ET>
 void CNNet<T, ET>::Sim(const T<ET>& net_inputs)
 {
-	std::vector<LayerPtr>::iterator it;
+	typename std::vector<LayerPtr>::iterator it = layers_.begin();
 	const T<ET>* layer_input = &net_inputs;
     for ( it = layers_.begin(); it != layers_.end(); ++it)   {
         (*it)->Propagate(*layer_input);
@@ -306,7 +333,7 @@ void CNNet<T, ET>::Sim(const T<ET>& net_inputs)
 template< template<class> class T, class ET>
 void CNNet<T, ET>::InitWeights(void(*weight_init_func)(T<ET>&) )
 {
-    std::vector<LayerPtr>::iterator it;
+    typename std::vector<LayerPtr>::iterator it;
     for(it = layers_.begin(); it != layers_.end(); ++it){
         (*it)->InitWeights(weight_init_func);
     }
@@ -316,7 +343,7 @@ void CNNet<T, ET>::InitWeights(void(*weight_init_func)(T<ET>&) )
 template< template<class> class T, class ET>
 void CNNet<T,ET>::PrepareForTraining()
 {
-    std::vector<LayerPtr>::iterator it;
+	typename std::vector<LayerPtr>::iterator it;
     for(it = layers_.begin(); it != layers_.end(); ++it){
         (*it)->PrepareForTraining();
     }
@@ -329,10 +356,10 @@ void CNNet<T,ET>::BackpropGradients(const T<ET>& net_dedx, const T<ET>& net_inpu
 	assert(net_dedx.num_elements() == this->out().num_elements());	
 
     layers_.back()->set_de_dx(net_dedx);
-    std::vector<LayerPtr>::reverse_iterator rit = layers_.rbegin();
+    typename std::vector<LayerPtr>::reverse_iterator rit = layers_.rbegin();
     LayerPtr next_layer = *rit;
 	++rit;
-    for(rit; rit != layers_.rend(); ++rit){
+    for(; rit != layers_.rend(); ++rit){
         next_layer->BackPropagate((*rit)->out(), (*rit)->de_dx());
         next_layer = *rit;
     }
@@ -343,13 +370,15 @@ template< template<class> class T, class ET>
 void CNNet<T,ET>::AccumulateHessian(const T<ET>& net_d2edx2, const T<ET>& net_input)
 {
 	assert(net_d2edx2.num_elements() == this->out().num_elements());
+
     layers_.back()->set_d2e_dx2(net_d2edx2);
-    std::vector<LayerPtr>::reverse_iterator rit = layers_.rbegin();
+    typename std::vector<LayerPtr>::reverse_iterator rit = layers_.rbegin();
     LayerPtr next_layer = *rit;
     //Skip last layer
-    ++rit;
-    for(rit; rit != layers_.rend(); ++rit){
-        next_layer->BackPropagateHessian((*rit)->out(), (*rit)->d2e_dx2());
+    ++rit;	
+    for(; rit != layers_.rend(); ++rit)
+	{
+		next_layer->BackPropagateHessian((*rit)->out(), (*rit)->d2e_dx2());
         next_layer = *rit;
     }
     layers_.front()->ComputeHessian(net_input);
@@ -359,7 +388,7 @@ void CNNet<T,ET>::AccumulateHessian(const T<ET>& net_d2edx2, const T<ET>& net_in
 template< template<class> class T, class ET>
 void CNNet<T,ET>::ResetHessian()
 {
-    std::vector<LayerPtr>::iterator it;
+    typename std::vector<LayerPtr>::iterator it;
     for(it = layers_.begin(); it != layers_.end(); ++it){
         (*it)->ResetHessian();
     }
@@ -368,7 +397,7 @@ void CNNet<T,ET>::ResetHessian()
 template< template<class> class T, class ET>
 void CNNet<T,ET>::AverageHessian()
 {
-    std::vector<LayerPtr>::iterator it;
+	typename std::vector<LayerPtr>::iterator it;
     for(it = layers_.begin(); it != layers_.end(); ++it){
         (*it)->AverageHessian();
     }
@@ -381,9 +410,13 @@ void CNNet<T,ET>::AverageHessian()
 template< template<class> class T, class ET>
 void CNNet<T,ET>::AdaptWeights(ET tau, bool use_hessian, ET mu)
 {
-    std::vector<LayerPtr>::iterator it;
-    for(it = layers_.begin(); it != layers_.end(); ++it){
-        (*it)->AdaptWeights(tau, use_hessian, mu);
+	typename std::vector<LayerPtr>::iterator it;
+    for(it = layers_.begin(); it != layers_.end(); ++it)
+	{
+		if ((*it)->is_trainable()) 
+		{
+			(*it)->AdaptWeights(tau, use_hessian, mu);
+		}
     }
 }
 
@@ -392,5 +425,7 @@ typedef CNNet< Tensor, float > CNNetF;
 typedef CNNet< Tensor, double > CNNetD;
 typedef CNNet< TensorGPU, float > CNNetCudaF;
 typedef CNNet< TensorGPU, double > CNNetCudaD;
+
+}
 
 #endif

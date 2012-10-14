@@ -118,6 +118,8 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="precomp.h"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 			/>
@@ -133,7 +135,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="cudart.lib cublas.lib hdf5d.lib hdf5_cppd.lib cudacnnd.lib gtestd.lib"
-				AdditionalLibraryDirectories="$(OutDir);&quot;$(SolutionDir)\3rdParty\hdf5\lib&quot;;&quot;$(SolutionDir)\3rdParty\gtest\lib&quot;"
+				AdditionalLibraryDirectories="&quot;$(OutDir)&quot;;&quot;$(SolutionDir)\3rdParty\hdf5\lib&quot;;&quot;$(SolutionDir)\3rdParty\gtest\lib&quot;"
 				GenerateManifest="true"
 				IgnoreAllDefaultLibraries="false"
 				IgnoreDefaultLibraryNames=""
@@ -267,6 +269,8 @@
 				AdditionalIncludeDirectories="&quot;$(SolutionDir)/include&quot;;&quot;$(SolutionDir)/3rdParty/gtest/include&quot;;&quot;$(SolutionDir)/3rdParty/hdf5/include&quot;"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="precomp.h"
 				WarningLevel="3"
 				DebugInformationFormat="0"
 			/>
@@ -337,8 +341,24 @@
 				>
 			</File>
 			<File
-				RelativePath=".\tensor_tests.cpp"
+				RelativePath=".\precomp.cpp"
 				>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\training_tests.cpp"
@@ -350,6 +370,10 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\precomp.h"
+				>
+			</File>
 			<File
 				RelativePath=".\tests_common.h"
 				>

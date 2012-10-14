@@ -1,17 +1,32 @@
-
-#include "common.h"
+//Copyright (c) 2012, Mikhail Sirotenko <mihail.sirotenko@gmail.com>
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without
+//modification, are permitted provided that the following conditions are met:
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+//DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+//ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdexcept>
 #include <cublas_v2.h>
 
-#include "layer.hpp"
-#include "tensor.h"
-#include "flayer_cuda.h"
-#include "tensor_cuda.h"
+#include "../precomp.hpp"
 
-
-#include "utils.cuh"
-#include "assert.h"
+namespace cudacnn
+{
 
 template class FLayer<TensorGPU, float, TansigMod<float> >;
 template class FLayer<TensorGPU, float, Tansig<float> >;
@@ -20,6 +35,7 @@ template class FLayer<TensorGPU, double, TansigMod<double> >;
 template class FLayer<TensorGPU, double, Tansig<double> >;
 template class FLayer<TensorGPU, double, Purelin<double> >;
 
+#ifdef HAVE_CUDA
 
 template<class T>
 void ApplyWeightsTemplate(const cublasHandle_t& handle, const TensorGPU<T>& layer_input, const TensorGPU<T>& weights, 
@@ -283,4 +299,7 @@ void FLayer<TensorGPU, T, TF>::ComputeHessian(const TensorGPU<T>& input)
     flat_input.Flatten();
 	ComputeGradientKernelProxy<true>(flat_input);
 	num_hessian_accums_++;
+}
+
+#endif //HAVE_CUDA
 }

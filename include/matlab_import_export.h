@@ -1,8 +1,31 @@
+//Copyright (c) 2012, Mikhail Sirotenko <mihail.sirotenko@gmail.com>
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without
+//modification, are permitted provided that the following conditions are met:
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+//DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+//ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #ifndef _MATLAB_IMPORTER_H
 #define _MATLAB_IMPORTER_H
 
+
 template<template<class> class TT, class T>
-class MatlabSaveLoad : public Layer<TT,T>::ILoadSaveObject
+class MatlabSaveLoad : public cudacnn::Layer<TT,T>::ILoadSaveObject
 {
 public:
 	MatlabSaveLoad(mxArray* struct_arr): struct_arr_(struct_arr){};
@@ -85,21 +108,17 @@ void MatlabSaveLoad<TT,T>::GetArray(TT<int>& arr, const std::string name)
 template<template<class> class TT, class T>
 void MatlabSaveLoad<TT,T>::GetString(std::string& str, const std::string name)
 {
-	char* out_str = MatlabTools::GetSVal(struct_arr_,name.c_str());
-	str = std::string(out_str);
+	str = MatlabTools::GetSVal(struct_arr_,name.c_str());
 }
 
 
-template<template<class> class TT, class T>
-int CNNetLoadFromMatlab(const mxArray* cnnAr, CNNet<TT,T >& cnet);
-
 
 using namespace MatlabTools;
-eTransfFunc GetTransferFunc(const mxArray* pCell);
+cudacnn::eTransfFunc GetTransferFunc(const mxArray* pCell);
 
 //TODO: create some universal function for CNNet import and export either to/from matlab or hdf5
 template<template<class> class TT, class T>
-int CNNetLoadFromMatlab(const mxArray* cnnAr, CNNet<TT,T>& cnet)
+int CNNetLoadFromMatlab(const mxArray* cnnAr, cudacnn::CNNet<TT,T>& cnet)
 {
 
 	try{
@@ -122,9 +141,9 @@ int CNNetLoadFromMatlab(const mxArray* cnnAr, CNNet<TT,T>& cnet)
 		{
 			mxArray* pCell = mxGetCell(players_ar,i);
 			Layer<TT, T>::eLayerType lt = Layer<TT, T>::eLayerUnknown;			
-			if(strcmp(GetSVal(pCell,"LayerType"),"clayer")==0)	lt = Layer<TT, T>::eCLayer;
-			if(strcmp(GetSVal(pCell,"LayerType"),"flayer")==0)	lt = Layer<TT, T>::eFLayer;
-            if(strcmp(GetSVal(pCell,"LayerType"),"pooling")==0)	lt = Layer<TT, T>::ePLayer;
+			if(GetSVal(pCell,"LayerType").compare("clayer")==0)	lt = Layer<TT, T>::eCLayer;
+			if(GetSVal(pCell,"LayerType").compare("flayer")==0)	lt = Layer<TT, T>::eFLayer;
+            if(GetSVal(pCell,"LayerType").compare("pooling")==0)	lt = Layer<TT, T>::ePLayer;
 			switch(lt){
 		case Layer<TT, T>::ePLayer:
 			{
@@ -135,9 +154,9 @@ int CNNetLoadFromMatlab(const mxArray* cnnAr, CNNet<TT,T>& cnet)
 				params.sx = GetScalar<UINT>(pCell,"SXRate");
 				params.sy = GetScalar<UINT>(pCell,"SYRate");
                 params.pooling_type = PoolingLayerT<TT, T>::eUnknown;
-                if(strcmp(GetSVal(pCell,"PoolingType"),"average")==0)	
+                if(GetSVal(pCell,"PoolingType").compare("average")==0)	
                     params.pooling_type = PoolingLayerT<TT, T>::eAverage;
-                if(strcmp(GetSVal(pCell,"PoolingType"),"max")==0)	
+                if(GetSVal(pCell,"PoolingType").compare("max")==0)	
                     params.pooling_type = PoolingLayerT<TT, T>::eMax;
 
                 layers.push_back(CNNet<TT,T>::LayerPtr(new PoolingLayer<TT,T>(params)));
@@ -146,6 +165,7 @@ int CNNetLoadFromMatlab(const mxArray* cnnAr, CNNet<TT,T>& cnet)
 
 		case Layer<TT, T>::eCLayer:
 			{
+				bool is_trainable = GetScalar<UINT>(pCell,"Trainable") == 1 ? true : false;
 				UINT inp_width = GetScalar<UINT>(pCell,"InpWidth");
 				UINT inp_height = GetScalar<UINT>(pCell,"InpHeight");
 				Tensor<T> weights, biases;
@@ -157,17 +177,17 @@ int CNNetLoadFromMatlab(const mxArray* cnnAr, CNNet<TT,T>& cnet)
 				switch(tf)	{
                     case eTansig_mod:
                         {
-                            layers.push_back(CNNet<TT,T>::LayerPtr(new CLayer<TT,T,TansigMod<T> >(inp_width, inp_height, weights, biases, conn_map)));
+                            layers.push_back(CNNet<TT,T>::LayerPtr(new CLayer<TT,T,TansigMod<T> >(inp_width, inp_height, is_trainable, weights, biases, conn_map)));
                         }
                         break;
                     case eTansig:
                         {
-                            layers.push_back(CNNet<TT,T>::LayerPtr(new CLayer<TT,T,Tansig<T> >(inp_width, inp_height, weights, biases, conn_map)));
+                            layers.push_back(CNNet<TT,T>::LayerPtr(new CLayer<TT,T,Tansig<T> >(inp_width, inp_height, is_trainable, weights, biases, conn_map)));
                         }
                         break;
                     case ePurelin:
                         {
-                            layers.push_back(CNNet<TT,T>::LayerPtr(new CLayer<TT,T,Purelin<T> >(inp_width, inp_height, weights, biases, conn_map)));
+                            layers.push_back(CNNet<TT,T>::LayerPtr(new CLayer<TT,T,Purelin<T> >(inp_width, inp_height, is_trainable, weights, biases, conn_map)));
                         }
                         break;
 					default:
@@ -178,6 +198,7 @@ int CNNetLoadFromMatlab(const mxArray* cnnAr, CNNet<TT,T>& cnet)
 			}
 			case Layer<TT, T>::eFLayer:
 				{
+					bool is_trainable = GetScalar<UINT>(pCell,"Trainable") == 1 ? true : false;
 					eTransfFunc tf = GetTransferFunc(pCell);
 					Tensor<T> weights, biases;
 					GetArray<T>(pCell,"Weights", weights);
@@ -186,17 +207,17 @@ int CNNetLoadFromMatlab(const mxArray* cnnAr, CNNet<TT,T>& cnet)
 					switch(tf){
                         case eTansig_mod:
                             {
-                                layers.push_back(CNNet<TT,T>::LayerPtr(new FLayer<TT,T,TansigMod<T> >(weights, biases)));
+                                layers.push_back(CNNet<TT,T>::LayerPtr(new FLayer<TT,T,TansigMod<T> >(weights, biases, is_trainable)));
                             }
                             break;
                         case eTansig:
                             {
-                                layers.push_back(CNNet<TT,T>::LayerPtr(new FLayer<TT,T,Tansig<T> >(weights, biases)));
+                                layers.push_back(CNNet<TT,T>::LayerPtr(new FLayer<TT,T,Tansig<T> >(weights, biases, is_trainable)));
                             }
                             break;
                         case ePurelin:
                             {
-                                layers.push_back(CNNet<TT,T>::LayerPtr(new FLayer<TT,T,Purelin<T> >(weights, biases)));
+                                layers.push_back(CNNet<TT,T>::LayerPtr(new FLayer<TT,T,Purelin<T> >(weights, biases, is_trainable)));
                             }
                             break;
 						default:
@@ -223,7 +244,7 @@ int CNNetLoadFromMatlab(const mxArray* cnnAr, CNNet<TT,T>& cnet)
 
 
 template<template<class> class TT, class T>
-mxArray* CNNetSaveToMatlab(CNNet<TT,T>& cnet, bool debug_save = false)
+mxArray* CNNetSaveToMatlab(cudacnn::CNNet<TT,T>& cnet, bool debug_save = false)
 {
 	try{
 		mxArray* struct_arr = mxCreateStructMatrix(1,1,0,NULL);

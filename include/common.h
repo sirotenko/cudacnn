@@ -1,62 +1,68 @@
-#pragma once
+//Copyright (c) 2012, Mikhail Sirotenko <mihail.sirotenko@gmail.com>
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without
+//modification, are permitted provided that the following conditions are met:
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+//DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+//ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-//TODO: make this dependent from compute capability
-#define MAX_THREADS 512
-//Optimal number of threads for the best occupancy.
-//This is kind of heuristic. Good setting for many modern nVidia GeForce cards
-//and for not too sophisticated kernels.
-#define MAX_OCCUP_THREADS 192
+#ifndef _CUDACNN_COMMON_H_
+#define _CUDACNN_COMMON_H_
 
-#define NULL    0
+
+//#define NULL    0
+#ifndef HAVE_CUDA
+#ifndef __device__
+#define __device__ 
+#endif
+#endif
+
+
+#define Sqr(a) ((a)*(a))
+#define Cube(a) ((a)*(a)*(a))
+
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
+#define SIGN(x) (((x) > 0) ? 1.0 : -1.0)
 
 typedef unsigned char BYTE;
 typedef unsigned int UINT;
 
-#define ROOT_LAYERS_GROUP_NAME "/Layers"
-#define LAYER_GROUP_NAME "/Layer"
-
-#define Sqr(a) (a)*(a)
-
-enum ePerfType
-{
-    eMSE,
-    eSSE
-};
-
-
-enum eTransfFunc
-{
-	eTransferUnknown,
-	ePurelin,
-	eTansig_mod,
-	eTansig,
-	eSquare
-};
-
-enum ePoolingType
-{
-	eSubsampling,
-	eMaxPooling
-};
-
-struct sSRate
-{
-	BYTE x; 
-	BYTE y;
-};
-
-inline int iRoundUpPow2(int v){
-	v--;
-	v |= v >> 1;
-	v |= v >> 2;
-	v |= v >> 4;
-	v |= v >> 8;
-	v |= v >> 16;
-	v++;
-	return v;
+//Static assert. Don't want to use boost just because of few funstions like this
+#define STATIC_ASSERT(expr, msg)               \
+{                                              \
+    char STATIC_ASSERTION__##msg[(expr)?1:-1]; \
+    (void)STATIC_ASSERTION__##msg[0];          \
 }
 
-//template<class T, class B> struct Derived_from {
-//	static void constraints(T* p) { B* pb = p; }
-//	Derived_from() { void(*p)(T*) = constraints; }
-//};
+
+namespace cudacnn
+{
+
+
+template <class T>
+inline std::string to_string (const T& t)
+{
+	std::stringstream ss;
+	ss << t;
+	return ss.str();
+}
+
+
+}
+#endif //_CUDACNN_COMMON_H_

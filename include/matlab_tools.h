@@ -1,25 +1,105 @@
+//Copyright (c) 2012, Mikhail Sirotenko <mihail.sirotenko@gmail.com>
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without
+//modification, are permitted provided that the following conditions are met:
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+//DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+//ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #ifndef __MATLAB_TOOLS_H
 #define __MATLAB_TOOLS_H
 
-#include "common.h"
-#include "mex.h" 
-#include "matrix.h"
+
 
 namespace MatlabTools
 {
 
-//Convert c++ type to matlab class ID
-template<class T>	mxClassID MatlabClassID();
 
-//float GetFVal(const mxArray* inp, const char* name);
-//BYTE GetBVal(const mxArray* inp, const char* name);
-//UINT GetUVal(const mxArray* inp, const char* name);
-char* GetSVal(const mxArray* inp, const char* name);
-//void GetMatrix(const mxArray* inp, const char* name, TensorFloat& OutMat);
-//void GetMatrix(const mxArray* inp, const char* name, Tensor<int>& OutMat);
-//void SetMatrix(const mxArray* inp, const char* name, const TensorFloat& OutMat);
+/*//Convert c++ type to matlab class ID
+template<class T>	mxClassID MatlabClassID();
+//Default implementation
+template<class T>	mxClassID MatlabClassID() {
+	std::stringstream ss;
+	ss<<"Unsupported type, sizeof = ";
+	ss<<sizeof(T);
+	throw std::runtime_error(ss.str());
+};*/
+
+//! Generic helper for matlab_get_class
+/*! If there are no specialized matches for __Data then we say that the ClassID that corresponds to this data type is unknown */
+template<class __Data>
+struct matlab_get_class_helper
+{
+    const static mxClassID value = mxUNKNOWN_CLASS;
+};	
+//! Generic helper for matlab_get_type
+/*! If there are no specialized matches for __ClassId__ then we say that the type that corresponds to this ClassID is unknown */
+template<unsigned int __ClassId__>
+struct matlab_get_type_helper
+{
+    typedef struct UnknownType type;
+};	
+// macro to declare a two-way type conversion between __Type and CLASS
+// specifically, we make a specialized matlab_get_class_helper instance to look up CLASS given __Type
+// and a specialized matlab_get_type_helper to look up __Type given CLASS
+#define DECLARE_MATLAB_TYPE_CONVERSION( __Type, CLASS ) \
+template<> \
+struct matlab_get_class_helper<__Type> \
+{ \
+    const static mxClassID value = CLASS; \
+}; \
+ \
+template<> \
+struct matlab_get_type_helper<CLASS> \
+{ \
+    typedef __Type type; \
+}	
+// declare conversions for known types
+DECLARE_MATLAB_TYPE_CONVERSION( bool, mxLOGICAL_CLASS );
+DECLARE_MATLAB_TYPE_CONVERSION( char, mxCHAR_CLASS );
+DECLARE_MATLAB_TYPE_CONVERSION( void, mxVOID_CLASS );
+DECLARE_MATLAB_TYPE_CONVERSION( double, mxDOUBLE_CLASS );
+DECLARE_MATLAB_TYPE_CONVERSION( float, mxSINGLE_CLASS );
+DECLARE_MATLAB_TYPE_CONVERSION( int8_t, mxINT8_CLASS );
+DECLARE_MATLAB_TYPE_CONVERSION( uint8_t, mxUINT8_CLASS );
+DECLARE_MATLAB_TYPE_CONVERSION( int16_t, mxINT16_CLASS );
+DECLARE_MATLAB_TYPE_CONVERSION( uint16_t, mxUINT16_CLASS );
+DECLARE_MATLAB_TYPE_CONVERSION( int32_t, mxINT32_CLASS );
+DECLARE_MATLAB_TYPE_CONVERSION( uint32_t, mxUINT32_CLASS );
+DECLARE_MATLAB_TYPE_CONVERSION( int64_t, mxINT64_CLASS );
+DECLARE_MATLAB_TYPE_CONVERSION( uint64_t, mxUINT64_CLASS );	
+//! Defines the mxClassID that corresponds to the __Data
+template<class __Data>
+struct matlab_get_class
+{
+    const static mxClassID value = matlab_get_class_helper<__Data>::value;
+};	
+//! Defines the data type that corresponds to __ClassId__
+template<unsigned int __ClassId__>
+struct matlab_get_type
+{
+    typedef typename matlab_get_type_helper<__ClassId__>::type type;
+};
+
+template<class T> bool CheckMatlabType(mxClassID id);
+
+std::string GetSVal(const mxArray* inp, const char* name);
 template <class T>
-void GetMatOrCell(const mxArray* Wcell, Tensor<T>& out_mat);
+void GetMatOrCell(const mxArray* Wcell, cudacnn::Tensor<T>& out_mat);
 
 template<class T>
 T GetScalar(const mxArray* scal)
@@ -61,9 +141,9 @@ T GetScalar(const mxArray* scal)
 		case mxUINT32_CLASS:
 			data = static_cast<T>(*static_cast<UINT*>(pdata)); break;
 		case mxINT64_CLASS:
-			data = static_cast<T>(*static_cast<long*>(pdata)); break;
+			data = static_cast<T>(*static_cast<long long*>(pdata)); break;
 		case mxUINT64_CLASS:
-			data = static_cast<T>(*static_cast<unsigned long*>(pdata)); break;
+			data = static_cast<T>(*static_cast<unsigned long long*>(pdata)); break;
 		default:
 			std::stringstream ss;
 			ss<<". Unknown or unsupported scalar data type.";
@@ -139,7 +219,7 @@ void SetScalar(T data, const char* name, mxArray* inp)
 		case mxUINT32_CLASS:
 			*pdata = static_cast<UINT>(data); break;
 		case mxINT64_CLASS:
-			*pdata = static_cast<long>(data); break;
+			*pdata = static_cast<long long>(data); break;
 		case mxUINT64_CLASS:
 			*pdata = static_cast<unsigned long>(data); break;
 		default:
@@ -166,17 +246,21 @@ void AddScalar(T data, const char* name, mxArray* inp)
 		throw std::runtime_error(ss.str());
 	}
 	mxAddField(inp,name);
-	mxArray* data_arr = mxCreateNumericMatrix(1,1,MatlabClassID<T>(),mxREAL);
+
+	mxArray* data_arr = mxCreateNumericMatrix(1,1,matlab_get_class<T>::value,mxREAL);
+
 	T* pdata = static_cast<T*>(mxGetData(data_arr));
 	*pdata = data;
 	mxSetField(inp,0,name,data_arr);
 }
 
 
+template<class T>
+void GetArray(const mxArray* arr, cudacnn::Tensor<T>& out_tens);
 
 
 template<class T>
-void GetArray(const mxArray* inp, const char* name, Tensor<T>& out_tens)
+void GetArray(const mxArray* inp, const char* name, cudacnn::Tensor<T>& out_tens)
 {
 	mxArray* arr = mxGetField(inp,0,name);
 	if(arr == NULL){
@@ -185,7 +269,7 @@ void GetArray(const mxArray* inp, const char* name, Tensor<T>& out_tens)
 		throw std::runtime_error(ss.str());
 	}
 	try{
-		GetArray(arr, out_tens);
+		GetArray<T>(arr, out_tens);
 	}
 	catch(std::runtime_error& ex){
 		std::stringstream ss;
@@ -194,15 +278,15 @@ void GetArray(const mxArray* inp, const char* name, Tensor<T>& out_tens)
 	}
 }
 template<class T>
-void GetArray(const mxArray* inp, const char* name, TensorGPU<T>& out_tens)
+void GetArray(const mxArray* inp, const char* name, cudacnn::TensorGPU<T>& out_tens)
 {
-	Tensor<T> tmp;
+	cudacnn::Tensor<T> tmp;
 	GetArray(inp, name, tmp);
 	out_tens = tmp;
 }
 
 template<class T>
-void GetArray(const mxArray* arr, Tensor<T>& out_tens)
+void GetArray(const mxArray* arr, cudacnn::Tensor<T>& out_tens)
 {
 	if (!mxIsNumeric(arr)) {
 		std::stringstream ss;
@@ -225,28 +309,32 @@ void GetArray(const mxArray* arr, Tensor<T>& out_tens)
 	size_t ndims = mxGetNumberOfDimensions(arr);
 	std::vector<UINT> dims(ndims);
 	const mwSize* dims_ptr = mxGetDimensions(arr);
-	for(int i = 0; i < ndims; ++i) dims[i] = static_cast<UINT>(dims_ptr[i]);
-	out_tens = Tensor<T>(dims, pdata);
+	for(UINT i = 0; i < ndims; ++i) dims[i] = static_cast<UINT>(dims_ptr[i]);
+	out_tens = cudacnn::Tensor<T>(dims, pdata);
 }
 
 template<class T>
-void GetArray(const mxArray* arr, TensorGPU<T>& out_tens)
+void GetArray(const mxArray* arr, cudacnn::TensorGPU<T>& out_tens)
 {
-	Tensor<T> tmp;
+	cudacnn::Tensor<T> tmp;
 	GetArray(arr, tmp);
 	out_tens = tmp;
 }
 
 template<class T>
-void AddArray(const TensorGPU<T>& data, const char* name, mxArray* inp)
+void AddArray(const cudacnn::Tensor<T>& data, const char* name, mxArray* inp);
+
+
+template<class T>
+void AddArray(const cudacnn::TensorGPU<T>& data, const char* name, mxArray* inp)
 {
 	//Copy from GPU to host memory
-	Tensor<T> data_host = data;
+	cudacnn::Tensor<T> data_host = data;
 	AddArray(data_host, name, inp);
 }
 
 template<class T>
-void AddArray(const Tensor<T>& data, const char* name, mxArray* inp)
+void AddArray(const cudacnn::Tensor<T>& data, const char* name, mxArray* inp)
 {
 	mxArray* scal = mxGetField(inp,0,name);
 	if(scal != NULL){
@@ -267,7 +355,7 @@ void AddArray(const Tensor<T>& data, const char* name, mxArray* inp)
 		dims_ptr[i] = static_cast<mwSize>(dims[i]);
 	}
 
-	mxArray* data_arr = mxCreateNumericArray(mwSize(ndims),dims_ptr,MatlabClassID<T>(),mxREAL);
+	mxArray* data_arr = mxCreateNumericArray(mwSize(ndims),dims_ptr,matlab_get_class<T>::value,mxREAL);
 	T* pdata = static_cast<T*>(mxGetData(data_arr));
 	memcpy(pdata, data.data(), data.num_elements()*sizeof(T));
 	mxSetField(inp,0,name,data_arr);
@@ -276,7 +364,7 @@ void AddArray(const Tensor<T>& data, const char* name, mxArray* inp)
 
 // arr should be properly initialized
 template<class T>
-void SetArray(const Tensor<T>& inp, mxArray* arr)
+void SetArray(const cudacnn::Tensor<T>& inp, mxArray* arr)
 {
 	if (!mxIsNumeric(arr)) {
 		std::stringstream ss;
@@ -298,7 +386,7 @@ void SetArray(const Tensor<T>& inp, mxArray* arr)
 	T* pdata = static_cast<T*>(mxGetData(arr));
 	size_t ndims = mxGetNumberOfDimensions(arr);
 	if(static_cast<UINT>(ndims) != inp.ndims()) {
-		throw std::runtime_error("Failed to save array. Ndims mismatch.")
+		throw std::runtime_error("Failed to save array. Ndims mismatch.");
 	}
 	UINT* dims = inp.dims();
 	const mwSize* dims_ptr = mxGetDimensions(arr);
@@ -314,7 +402,7 @@ void SetArray(const Tensor<T>& inp, mxArray* arr)
 }
 
 template<class T>
-void SetArray(const Tensor<T>& inp, mxArray* struct_arr, const char* name)
+void SetArray(const cudacnn::Tensor<T>& inp, mxArray* struct_arr, const char* name)
 {
 	mxArray* arr = mxGetField(struct_arr,0,name);
 	if(arr == NULL){
@@ -332,9 +420,6 @@ void SetArray(const Tensor<T>& inp, mxArray* struct_arr, const char* name)
 	}
 
 }
-
-template<class T>
-bool CheckMatlabType(mxClassID id);
 
 }
 

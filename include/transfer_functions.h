@@ -1,83 +1,43 @@
+//Copyright (c) 2012, Mikhail Sirotenko <mihail.sirotenko@gmail.com>
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without
+//modification, are permitted provided that the following conditions are met:
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+//DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+//ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #ifndef _TRANSFER_FUNCTIONS_H
 #define _TRANSFER_FUNCTIONS_H
 
-//template <class T> class TransferFunctionBase;
-//template <class T> class Purelin;
-//template <class T> class Tansig;
-//template <class T> class TansigMod;
+namespace cudacnn
+{
 
-
-//Factory class
-//template <class T> 
-//class TransferFunction
-//{
-//public:
-//	TransferFunction(eTransfFunc tf) : transfer_function_(NULL) 
-//	{
-//		Create(tf);
-//	}
-//	void Create(eTransfFunc tf)
-//	{
-//		transfer_type_ = tf;
-//		if(transfer_function_) delete transfer_function_;
-//		switch(tf)
-//		{
-//		case ePurelin:
-//			transfer_function_ = new Purelin<T>();
-//			break;
-//		case eTansig:
-//			transfer_function_ = new Tansig<T>();
-//			break;
-//		case eTansig_mod:
-//			transfer_function_ = new TansigMod<T>();
-//			break;
-//		default:
-//			transfer_function_ = new Purelin<T>();
-//		}
-//	}
-//	~TransferFunction()
-//	{
-//		if(transfer_function_) delete transfer_function_;
-//	}
-//	TransferFunction<T>& operator =(const TransferFunction<T>& rhs )
-//	{
-//		if (this == &rhs)      // Same object?
-//			return *this;
-//		Create(rhs.type());
-//		return *this;
-//	}
-//	T operator() (T x)
-//	{
-//		return (*transfer_function_)(x);
-//	}
-//	T dydx(T fn_out)
-//	{
-//		return transfer_function_->dydx(fn_out);
-//	}
-//	T d2ydx2(T fn_out)
-//	{
-//		return transfer_function_->d2ydx2(fn_out);
-//	}
-//	eTransfFunc type() const { return transfer_type_; }
-//	std::string name() const { return transfer_function_->name(); }
-//protected:
-//	TransferFunctionBase<T>* transfer_function_;
-//	eTransfFunc transfer_type_;
-//};
-//
-//Base class
-//template <class T>
-//class TransferFunctionBase
-//{
-//public:
-//	virtual T operator() (T x) {return 0;};
-//	virtual T dydx(T fn_out) {return 0;};
-//	virtual T d2ydx2(T fn_out) {return 0;};
-//	virtual std::string name() {return 0;};
-//};
+enum eTransfFunc
+{
+	eTransferUnknown,
+	ePurelin,
+	eTansig_mod,
+	eTansig,
+	eShrinkage,
+	eSquare
+};
 
 template <class T>
-class TansigMod //: public TransferFunctionBase<T>
+class TansigMod
 {
 public:
 	__device__ T operator() (T x)
@@ -136,5 +96,6 @@ public:
 	std::string name() { return "tansig";}
 };
 
+}
 
 #endif

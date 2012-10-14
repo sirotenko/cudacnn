@@ -1,7 +1,8 @@
-#include "tests_common.h"
-#include "performance_functions.h"
-#include <sstream>
+#include "precomp.h"
 
+
+//TODO: Make these test independent from hdf5
+#ifdef HAVE_HDF5
 class CNNTrainTest : public ::testing::Test {
 protected:
 	CNNetCudaF cnnet_gpu;
@@ -162,13 +163,6 @@ protected:
 	}
 };
 //
-template<class T>
-void RandomWeightInit(Tensor<T>& weight)
-{
-	for (UINT i = 0; i < weight.num_elements(); ++i)	{
-		weight[i] = -0.5f + (double(std::rand()) / RAND_MAX);
-	}
-}
 
 TEST_F(CNNTrainTestNumeric, TestGradientsNumeric)
 {
@@ -231,3 +225,4 @@ TEST_F(CNNTrainTestNumeric, TestGradientsNumeric)
 	}
 }
 
+#endif  //HAVE_HDF5

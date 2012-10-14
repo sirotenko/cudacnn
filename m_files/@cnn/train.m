@@ -43,7 +43,11 @@ tic;    %Fix the start time
 perf_plot = []; %Array for storing performance data
 %Coefficient, determining the running estimation of diagonal 
 
+
+trainer.MCRSubsetSize = min(trainer.MCRSubsetSize, test_datareader.num_samples);
+
 num_samples = train_datareader.num_samples;
+mcr = [];
 %Initial MCR calculation
 [mcr(1) test_datareader]=calcMCR(cnet,test_datareader, 1:trainer.MCRSubsetSize);
 plot(h_MCRaxes,mcr);
@@ -53,13 +57,13 @@ SetText(h_MCRedit,mcr(end));
 %cudacnnMex(cnet,'init_trainer',trainer);
 
 if(trainer.HcalcMode == 1)
+    cudacnnMex(cnet,'reset_hessian');
     for i=1:trainer.HrecalcSamplesNum
         %Simulating
         [inp, targ, train_datareader] = train_datareader.read(train_datareader, i);
         [out, cnet] = sim(cnet,single(inp));    
         %Calculate the error
-        e = out-targ';
-        e_derriv = 2*e/length(e);
+        e_derriv = 2*single(ones(size(out)));
         cudacnnMex(cnet,'accum_hessian',e_derriv,single(inp));
         SetHessianProgress(h_HessPatch,h_HessEdit,i/trainer.HrecalcSamplesNum);
     end
@@ -72,16 +76,12 @@ for t=1:trainer.epochs
     SetTextHP(h_ThetaEdit,trainer.theta(t));
     %For all patterns
     for n=1:num_samples
-        %Simulating
-        [inp, targ, train_datareader] = train_datareader.read(train_datareader,n);
-        [out, cnet] = sim(cnet,single(inp));    
-        %Calculate the error
-        e = single(out-targ');
-        e_derriv = 2*e/length(e);
-        cudacnnMex(cnet, 'compute_gradient', e_derriv, single(inp));
-
-         if(trainer.HcalcMode == 1)
+        
+        iteration = (t-1)*num_samples + n;
+        
+         if(trainer.HcalcMode == 1)            
             if(mod(t * num_samples + n,trainer.Hrecalc) == 0) %If it is time to recalculate Hessian
+				cudacnnMex(cnet,'reset_hessian');
                 if(n+trainer.HrecalcSamplesNum > num_samples)
                     stInd = num_samples - trainer.HrecalcSamplesNum;
                 else
@@ -91,16 +91,36 @@ for t=1:trainer.epochs
                     %Simulating
                     [inp, targ, train_datareader] = train_datareader.read(train_datareader, i);
                     [out, cnet] = sim(cnet,single(inp));    
-                    %Calculate the error
-                    e = single(out-targ');
-                    e_derriv = 2*e/length(e);
-                    cudacnnMex(cnet,'accum_hessian',e_derriv,single(inp));                
+                    e_derriv2 = 2*single(ones(size(out)));
+                    cudacnnMex(cnet,'accum_hessian',e_derriv2,single(inp));                
                     SetHessianProgress(h_HessPatch,h_HessEdit,(i-stInd)/trainer.HrecalcSamplesNum);
                 end
                 %Averaging
                 cudacnnMex(cnet,'average_hessian');
             end
         end
+        %Simulating
+        [inp, targ, train_datareader] = train_datareader.read(train_datareader,n);
+                
+        [out, cnet_obj] = sim(cnet_obj,single(inp)); 
+        
+        if (max(isnan(out(:))) == 1)
+            %bad output
+            fprintf('Bad CNN Output \n');
+            disp(['Epoch : ' num2str(t)]);
+            disp(['Iter : ' num2str(n)]);
+            cnet = cnn_exec(cnet_obj, 'debug_save');
+            output_locals.out = out;
+            output_locals.inp = inp;
+            return;
+        end
+        
+        %Calculate the error
+        e = single(out-targ');
+        %TODO: this is only true for MSE. Fix it
+        e_derriv = 2*e/length(e);        
+        cnn_exec(cnet_obj, 'compute_gradient', e_derriv, single(inp));
+
 
         perf(n) = mse(e); %Store the error
         
@@ -109,16 +129,16 @@ for t=1:trainer.epochs
         
         %Plot mean of performance for every N patterns
         if(n>1)
+            if(~mod(n-1,trainer.RMSEUpdatePeriod))
+                perf_plot = [perf_plot,mean(sqrt(perf(n-10:n)))];
+                plot(h_RMSEaxes,perf_plot);
+                SetText(h_RMSEedit,perf_plot(end));
+            end
             if(~mod(n-1,trainer.MCRUpdatePeriod))
                 [new_mcr test_datareader] = calcMCR(cnet,test_datareader, 1:trainer.MCRSubsetSize);
                 mcr = [mcr new_mcr];
                 plot(h_MCRaxes,mcr);
                 SetText(h_MCRedit,mcr(end));
-            end
-            if(~mod(n-1,trainer.RMSEUpdatePeriod))
-                perf_plot = [perf_plot,mean(sqrt(perf(n-10:n)))];
-                plot(h_RMSEaxes,perf_plot);
-                SetText(h_RMSEedit,perf_plot(end));
             end
         end
         

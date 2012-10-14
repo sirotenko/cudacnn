@@ -126,6 +126,8 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="precomp.hpp"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 			/>
@@ -264,6 +266,8 @@
 				PreprocessorDefinitions="NDEBUG"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="precomp.hpp"
 				WarningLevel="3"
 				DebugInformationFormat="0"
 			/>
@@ -318,6 +322,26 @@
 				RelativePath=".\src\hdf5_helper.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\src\precomp.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+			</File>
 			<Filter
 				Name="Layers_cpu"
 				>
@@ -346,15 +370,11 @@
 					>
 				</File>
 				<File
-					RelativePath=".\src\cuda\player_cuda.cu"
+					RelativePath=".\src\cuda\flayer_cuda.cu"
 					>
 				</File>
-			</Filter>
-			<Filter
-				Name="Tensor"
-				>
 				<File
-					RelativePath=".\src\tensor.cpp"
+					RelativePath=".\src\cuda\player_cuda.cu"
 					>
 				</File>
 			</Filter>
@@ -365,7 +385,7 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\include\cnn_kernels.h"
+				RelativePath="..\include\cnnconfig.h"
 				>
 			</File>
 			<File
@@ -390,6 +410,10 @@
 			</File>
 			<File
 				RelativePath="..\include\matlab_tools.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\precomp.hpp"
 				>
 			</File>
 			<File
@@ -455,10 +479,6 @@
 			<Filter
 				Name="Training"
 				>
-				<File
-					RelativePath=".\performance_functions.h"
-					>
-				</File>
 				<File
 					RelativePath="..\include\trainer.h"
 					>

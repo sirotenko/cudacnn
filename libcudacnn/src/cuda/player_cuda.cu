@@ -1,29 +1,46 @@
+//Copyright (c) 2012, Mikhail Sirotenko <mihail.sirotenko@gmail.com>
+//All rights reserved.
+//
+//Redistribution and use in source and binary forms, with or without
+//modification, are permitted provided that the following conditions are met:
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+//THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+//DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+//ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "common.h"
 #include <stdexcept>
-#include "layer.hpp"
-#include "tensor.h"
-#include "player_cuda.h"
-#include "tensor_cuda.h"
-#include "assert.h"
-//#include "transfer_functions_cu.h"
-#include "utils.cuh"
-#include "transfer_functions_cu.h"
+#include "../precomp.hpp"
+
+namespace cudacnn
+{
 
 //Instantiate
-template PoolingLayer<TensorGPU, float>;
-template PoolingLayer<TensorGPU, double>;
+template class PoolingLayer<TensorGPU, float>;
+template class PoolingLayer<TensorGPU, double>;
 
+#ifdef HAVE_CUDA
 
 template <class T, int nthreads>
-__global__ void SubsampleKernel(const TensorDev<T> inputs, TensorDev<T> output)
+__global__ void SubsampleKernel(const TensorDev3<T> inputs, TensorDev3<T> output)
 {
-	int sx = inputs.w() / output.w();
-	int sy = inputs.h() / output.h();
+	int sx = inputs.w / output.w;
+	int sy = inputs.h / output.h;
 	int tx = threadIdx.x%sx;
 	int ty = threadIdx.x/sx;
-	int x = blockIdx.x%output.w(); 
-	int y = blockIdx.x/output.w();
+	int x = blockIdx.x%output.w; 
+	int y = blockIdx.x/output.w;
 	int m = blockIdx.y;
 
 	int tid = threadIdx.x;
@@ -58,14 +75,14 @@ __global__ void SubsampleKernel(const TensorDev<T> inputs, TensorDev<T> output)
 		output(x,y,m) = vsmem[0]/(sx*sy);
 }
 template <class T, int nthreads>
-__global__ void MaxPoolingKernel(const TensorDev<T> inputs, TensorDev<T> output)
+__global__ void MaxPoolingKernel(const TensorDev3<T> inputs, TensorDev3<T> output)
 {
-	int sx = inputs.w() / output.w();
-	int sy = inputs.h() / output.h();
+	int sx = inputs.w / output.w;
+	int sy = inputs.h / output.h;
 	int tx = threadIdx.x%sx;
 	int ty = threadIdx.x/sx;
-	int x = blockIdx.x%output.w(); 
-	int y = blockIdx.x/output.w();
+	int x = blockIdx.x%output.w; 
+	int y = blockIdx.x/output.w;
 	int m = blockIdx.y;
 
 	int tid = threadIdx.x;
@@ -168,14 +185,14 @@ void PoolingLayer<TensorGPU, T>::Propagate(const TensorGPU<T>& layer_input )
 }
 
 template <class T, int nthreads, bool hessian>
-__global__ void BakpropagateSubsampleKernel(TensorDev<T> dedx, TensorDev<T> de_dx_prev)
+__global__ void BakpropagateSubsampleKernel(TensorDev3<T> dedx, TensorDev3<T> de_dx_prev)
 {
-	int sx = de_dx_prev.w() / dedx.w();
-	int sy = de_dx_prev.h() / dedx.h();
+	int sx = de_dx_prev.w / dedx.w;
+	int sy = de_dx_prev.h / dedx.h;
 	int tx = threadIdx.x%sx;
 	int ty = threadIdx.x/sx;
-	int x = blockIdx.x%dedx.w(); 
-	int y = blockIdx.x/dedx.w();
+	int x = blockIdx.x%dedx.w; 
+	int y = blockIdx.x/dedx.w;
 	int m = blockIdx.y;
 
 	if(tx < sx && ty < sy){
@@ -183,15 +200,15 @@ __global__ void BakpropagateSubsampleKernel(TensorDev<T> dedx, TensorDev<T> de_d
 	}
 }
 template <class T, int nthreads, bool hessian>
-__global__ void BakpropagateMaxPoolingKernel(TensorDev<T> input, TensorDev<T> output,
-                                             TensorDev<T> dedx, TensorDev<T> de_dx_prev)
+__global__ void BakpropagateMaxPoolingKernel(TensorDev3<T> input, TensorDev3<T> output,
+                                             TensorDev3<T> dedx, TensorDev3<T> de_dx_prev)
 {
-	int sx = de_dx_prev.w() / dedx.w();
-	int sy = de_dx_prev.h() / dedx.h();
+	int sx = de_dx_prev.w / dedx.w;
+	int sy = de_dx_prev.h / dedx.h;
 	int tx = threadIdx.x%sx;
 	int ty = threadIdx.x/sx;
-	int x = blockIdx.x%dedx.w(); 
-	int y = blockIdx.x/dedx.w();
+	int x = blockIdx.x%dedx.w; 
+	int y = blockIdx.x/dedx.w;
 	int m = blockIdx.y;
 
 	if(tx < sx && ty < sy){
@@ -281,5 +298,5 @@ void PoolingLayer<TensorGPU, T>::BackPropagateHessian(const TensorGPU<T>& input,
 	assert(d2edx2_prev.HaveSameSize(input));
 	BackpropagateKernelProxy<true>(input, d2edx2_prev);
 }
-
-
+#endif //HAVE_CUDA
+}

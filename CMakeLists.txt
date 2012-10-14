@@ -1,10 +1,15 @@
-#Taken from OpenCV and slightly changed
-cmake_minimum_required(VERSION 2.8.6 FATAL_ERROR)
+#Based on OpenCV cmake script
+cmake_minimum_required(VERSION 2.8.4 FATAL_ERROR)
 
 IF(COMMAND CMAKE_POLICY)
   CMAKE_POLICY(VERSION 2.8)
-  #CMAKE_POLICY(SET CMP0003 NEW)
 ENDIF(COMMAND CMAKE_POLICY)
+
+# CUDA accelerated Convolutional neutal network library 
+project(cudacnn)
+#Script debug
+#SET( CMAKE_VERBOSE_MAKEFILE on )
+SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMake)
 
 if(UNIX)
   set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /lib /usr/lib)
@@ -19,19 +24,13 @@ if (NOT CMAKE_INSTALL_PREFIX)
 endif()
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
-set(USE_DOUBLE OFF CACHE BOOL "Use double precision instead float")
 set(WITH_CUDA ON CACHE BOOL "Build cuda version of library")
 set(WITH_HDF5 OFF CACHE BOOL "HDF5 library to save and load neural networks")
 
-project(cudacnn)
 
 if(MSVC)
     set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
 endif()
-
-#Some of CMAKE Find scripts not working propertly
-# set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake_files 
-  # ${CMAKE_MODULE_PATH})
 
 # ----------------------------------------------------------------------------
 #  Current version number:
@@ -74,26 +73,30 @@ ENDIF(BUILD_SHARED_LIBS)
 set(PACKAGE "cudacnn")
 set(PACKAGE_NAME "cudacnn")
 set(PACKAGE_STRING "${PACKAGE} ${CUDACNN_VERSION}")
-set(PACKAGE_TARNAME "${PACKAGE}")
-set(PACKAGE_VERSION "${CUDACNN_VERSION}")
 
 # Build/install (or not) some apps:
 # ===================================================
 set(BUILD_MEX_FILES ON CACHE BOOL "Build Matlab mex files")
-set(BUILD_C_EXAMPLES OFF CACHE BOOL "Build C examples")
 
 # Build tests:
 # ===================================================
 set(BUILD_TESTS OFF CACHE BOOL "Build tests")
 
-include(OpenCVPCHSupport.cmake REQUIRED)
+include(cudacnnPCHSupport.cmake REQUIRED)
 
-if(MSVC)
-   set(DEFAULT_ENABLE_OPENMP ON)
-else()
-   set(DEFAULT_ENABLE_OPENMP OFF)
-endif()
-set(ENABLE_OPENMP ${DEFAULT_ENABLE_OPENMP} CACHE BOOL "")
+#if(MSVC)
+#   set(DEFAULT_ENABLE_OPENMP ON)
+#else()
+#   set(DEFAULT_ENABLE_OPENMP OFF)
+#endif()
+#set(ENABLE_OPENMP ${DEFAULT_ENABLE_OPENMP} CACHE BOOL "")
+
+# ----------------------------------------------------------------------------
+# 64-bit detection:
+# ----------------------------------------------------------------------------
+IF( (CMAKE_SIZEOF_VOID_P EQUAL 8) OR CMAKE_CL_64)
+  SET(HAVE_64_BIT 1)
+ENDIF( (CMAKE_SIZEOF_VOID_P EQUAL 8) OR CMAKE_CL_64)
 
 # ----------------------------------------------------------------------------
 # Detect GNU version:
@@ -142,14 +145,27 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     endif()
 endif()
 
+############################### Boost ################################
+if(CMAKE_COMPILER_IS_GNUCXX)
+	set(Boost_USE_STATIC_LIBS OFF)
+	set(Boost_USE_MULTITHREADED ON) 
+	set(Boost_USE_STATIC_RUNTIME OFF)
+	find_package(Boost 1.42.0 REQUIRED)
+
+	if(Boost_FOUND)
+		include_directories(${Boost_INCLUDE_DIRS})
+		set(HAVE_BOOST 1)
+		message(STATUS "Boost found")			
+	endif()
+endif(CMAKE_COMPILER_IS_GNUCXX)
 ############################### CUDA ################################
 if (WITH_CUDA)
-	find_package(CUDA 3.2)
+	find_package(CUDA 4.2)
 	if (CUDA_FOUND)		
 		set(HAVE_CUDA 1)
 		message(STATUS "CUDA detected: " ${CUDA_VERSION})
 		
-		set(CUDA_COMPUTE_CAPABILITIES " 1.1 1.2 1.3 2.0 " CACHE STRING "Add or remove compute capability")
+		set(CUDA_COMPUTE_CAPABILITIES " 2.0 " CACHE STRING "Add or remove compute capability")
 		set(CUDA_NVCC_FLAGS_ARCH ${CUDA_COMPUTE_CAPABILITIES})
 
 		set(CUDA_NVCC_FLAGS_NUM "")
@@ -167,10 +183,50 @@ if (WITH_CUDA)
 		set (loop_var "")
 		foreach( loop_var IN LISTS CUDA_NVCC_FLAGS_NUM)
 		    set (CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_${loop_var},code=sm_${loop_var})
-		    set (CUDACNN_CUDA_CC ${CUDACNN_CUDA_CC}  -gencode arch=compute_${loop_var},code=sm_${loop_var})
+		    set (CUDACNN_CUDA_CC ${CUDACNN_CUDA_CC} -gencode arch=compute_${loop_var},code=sm_${loop_var})
 		endforeach()
 
 	endif()
+endif()
+############################### Matlab ################################
+if(BUILD_MEX_FILES)
+	find_package(Matlab REQUIRED)
+	if (MATLAB_FOUND)
+		set(HAVE_MATLAB 1)
+		message(STATUS "Matlab found")		
+	else()
+		message(STATUS "Matlab not found. Please specify the paths to Matlab libs and headers")
+		set(MATLAB_INCLUDE_DIR "" CACHE PATH "MATLAB: include path for mex.h, engine.h, etc")
+		set(MATLAB_MEX_LIBRARY "" CACHE FILEPATH "MATLAB: path to libmex.lib")		
+		set(MATLAB_MX_LIBRARY "" CACHE FILEPATH "MATLAB: path to libmx.lib")		
+		set(MATLAB_ENG_LIBRARY "" CACHE FILEPATH "MATLAB: path to libeng.lib")		
+		set(MATLAB_MEXFILE_EXT "" CACHE STRING "MATLAB: extension of mex-files")		
+		SET(MATLAB_LIBRARIES
+		  ${MATLAB_MEX_LIBRARY}
+		  ${MATLAB_MX_LIBRARY}
+		  ${MATLAB_ENG_LIBRARY}
+		)
+	endif()		
+endif()
+############################### HDF5 ################################
+if(WITH_HDF5)
+	set(HDF5_FIND_COMPONENTS "C;CXX")
+	find_package(HDF5 REQUIRED ${HDF5_FIND_COMPONENTS})
+	if (HDF5_FOUND)
+		set(HAVE_HDF5 1)
+		message(STATUS "HDF5 found")		
+		include_directories(${HDF5_INCLUDE_DIRS})	
+	else()
+		message(STATUS "HDF5 not found. Please specify the paths to HDF5 libs and headers")
+		set(HDF5_INCLUDE_DIRS "" CACHE PATH "HDF5: include path")
+		set(HDF5_MAIN_LIBRARY "" CACHE PATH "HDF5: hdf5 lib path")				
+		set(HDF5_CPP_LIBRARY "" CACHE PATH "HDF5: hdf5_cpp lib path")				
+		SET(HDF5_LIBRARIES
+		  ${HDF5_MAIN_LIBRARY}
+		  ${HDF5_CPP_LIBRARY}
+		)
+		
+	endif()		
 endif()
 ############################### GTest ################################
 if(BUILD_TESTS)
@@ -180,43 +236,11 @@ if(BUILD_TESTS)
 		message(STATUS "GTest found")		
 	endif()		
 endif()
-############################### Matlab ################################
-if(BUILD_MEX_FILES)
-	find_package(Matlab REQUIRED)
-	if (MATLAB_FOUND)
-		set(HAVE_MATLAB 1)
-		message(STATUS "Matlab found")		
-	endif()		
-endif()
-############################### Matlab ################################
-if(WITH_HDF5)
-	set(HDF5_FIND_COMPONENTS "C;CXX")
-	find_package(HDF5 REQUIRED ${HDF5_FIND_COMPONENTS})
-	if (HDF5_FOUND)
-		set(HAVE_HDF5 1)
-		message(STATUS "HDF5 found")		
-		# message(STATUS ${HDF5_INCLUDE_DIRS})		
-		# message(STATUS ${HDF5_LIBRARIES})		
-		# message(STATUS ${HDF5_LIBRARY_DIRS})
-		# message(STATUS ${HDF5_CXX_LIBRARIES})
-		# message(STATUS ${HDF5_LIBRARIES_RELEASE})
-	endif()		
-endif()
 
 
-# ----------------------------------------------------------------------------
-#                   UPDATE CONFIG FILES & SCRIPTS:
-#
-#  CONFIGURE_FILE(InputFile OutputFile [COPYONLY] [ESCAPE_QUOTES] [@ONLY])
-# If @ONLY is specified, only variables of the form @VAR@ will be
-#  replaces and ${VAR} will be ignored.
-#
-#  A directory will be created for each platform so the "cnnconfig.h" file is
-#   not overwritten if cmake generates code in the same path.
-# ----------------------------------------------------------------------------
 add_definitions(-DHAVE_CONFIG_H)
 
-set(CUDACNN_CONFIG_FILE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/" CACHE PATH "Where to create the platform-dependant cnnconfig.h")
+set(CUDACNN_CONFIG_FILE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include" CACHE PATH "Where to create the platform-dependant cnnconfig.h")
 
 message(STATUS "Parsing 'cnnconfig.h.cmake'")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cnnconfig.h.cmake" "${CUDACNN_CONFIG_FILE_INCLUDE_DIR}/cnnconfig.h")
@@ -318,26 +342,26 @@ if(CMAKE_COMPILER_IS_GNUCXX)
             set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -msse3")
         endif()
         
-        if(${CMAKE_CUDACNN_GCC_VERSION_NUM} GREATER 402)
-            set(HAVE_GCC43_OR_NEWER 1)
-        endif()
-        if(${CMAKE_CUDACNN_GCC_VERSION_NUM} GREATER 401)
-            set(HAVE_GCC42_OR_NEWER 1)
-        endif()
+#        if(${CMAKE_CUDACNN_GCC_VERSION_NUM} GREATER 402)
+#            set(HAVE_GCC43_OR_NEWER 1)
+#        endif()
+#        if(${CMAKE_CUDACNN_GCC_VERSION_NUM} GREATER 401)
+#            set(HAVE_GCC42_OR_NEWER 1)
+#        endif()
         
-        if(HAVE_GCC43_OR_NEWER OR APPLE)
+#        if(HAVE_GCC43_OR_NEWER OR APPLE)
             if(ENABLE_SSSE3)
                 set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -mssse3")
             endif()
-            if(HAVE_GCC42_OR_NEWER)
+ #           if(HAVE_GCC42_OR_NEWER)
                 if(ENABLE_SSE41)
                     set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -msse4.1")
                 endif()
                 if(ENABLE_SSE42)
                     set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -msse4.2")
                 endif()
-            endif()
-        endif()
+  #          endif()
+   #     endif()
     endif()
 
     if(X86 OR X86_64)
@@ -410,13 +434,9 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin CACHE PATH "Output directory 
 #-----------------------------------
 # Subdirectories:
 #-----------------------------------
-#add_subdirectory(include)
 add_subdirectory(libcudacnn)
-if(BUILD_MEX_FILES)
+if(BUILD_MEX_FILES AND MATLAB_FOUND)
 	add_subdirectory(mexFunction)
-endif()
-if(BUILD_C_EXAMPLES)
-	add_subdirectory(samples)
 endif()
 if(BUILD_TESTS)
 	enable_testing()
@@ -450,9 +470,28 @@ message(STATUS "    Use Cuda:                  No")
 endif()
 
 if(WITH_HDF5 AND HDF5_FOUND)
-message(STATUS "    Hdf5:	                   YES")
+message(STATUS "    Use Hdf5:                  YES")
 else()	
-message(STATUS "    Hdf5:                 	   NO")
+message(STATUS "    Use Hdf5:                  NO")
 endif()
+
+if(BUILD_MEX_FILES)
+message(STATUS "    Build mex files:           YES")
+else()	
+message(STATUS "    Build mex files:           NO")
+endif()
+
+if(MATLAB_FOUND)
+message(STATUS "    Matlab found:              YES")
+else()	
+message(STATUS "    Matlab found:              NO")
+endif()
+if(Boost_FOUND)
+message(STATUS "    Boost found:               YES")
+else()	
+message(STATUS "    Boost found:               NO")
+endif()
+
+
 message(STATUS "")
 message(STATUS "    Install path:              ${CMAKE_INSTALL_PREFIX}")

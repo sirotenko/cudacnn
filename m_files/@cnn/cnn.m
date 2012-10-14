@@ -24,6 +24,10 @@ if init_weights
     
     for k = 1:length(cnnet_struct.layers)
         layer = cnnet_struct.layers{k};
+        if ~isfield(cnnet_struct.layers{k}, 'Trainable')
+            cnnet_struct.layers{k}.Trainable = 1;
+        end
+
         switch(layer.LayerType)
             case 'clayer'
                 cnnet_struct.layers{k}.InpWidth = out_width;

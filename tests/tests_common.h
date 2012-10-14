@@ -1,32 +1,16 @@
 #ifndef _TESTS_COMMON_H
 #define _TESTS_COMMON_H
-#include <limits.h>
-#include <stdexcept>
-#include <fstream>
-#include <iostream>
-#include "gtest/gtest.h"
-#include "common.h"
-#include "tensor.h"
-
-//#include <mex.h>
-//#include <mat.h>
-#include "exceptions.h"
-
-#include "layer.hpp"
-#include "clayer_cuda.h"
-#include "player_cuda.h"
-#include "flayer_cuda.h"
-
-#include "clayer.h"
-#include "player.h"
-#include "flayer.h"
-
-#include "transfer_functions.h"
-#include "performance_functions.h"
-#include "conv_net.h"
-//#include "matlab_import_export.h"
 
 #define GPU_FLOAT_TOLLERANCE 0.00001
+using namespace cudacnn;
+
+template<class T>
+void RandomWeightInit(Tensor<T>& weight)
+{
+	for (UINT i = 0; i < weight.num_elements(); ++i)	{
+		weight[i] = -0.5f + (double(std::rand()) / RAND_MAX);
+	}
+}
 
 template <class T>
 void ReadCSV(Tensor<T>* buff, std::string filename)
@@ -65,5 +49,39 @@ void AssertNearTensors(const Tensor<T>& host, const TensorGPU<T>& gpu, std::stri
 		ASSERT_NEAR(host[i],gpu_host[i], GPU_FLOAT_TOLLERANCE)<<message<<"Host and CUDA tensors have different values at i = "<<i;
 	}
 }
+
+
+class CUDATest : public ::testing::Test {
+protected:	
+	cudaDeviceProp deviceProp;
+	virtual void SetUp()
+	{
+		int deviceCount;
+		cudaGetDeviceCount(&deviceCount);
+		ASSERT_TRUE(deviceCount > 0) <<"No CUDA graphics card \n";
+		cudaGetDeviceProperties(&deviceProp, 0);
+		ASSERT_TRUE(deviceProp.major >= 1)<<"Not enough CUDA compute capability version \n";
+	}
+	virtual void TearDown()
+	{
+	}
+};
+
+// Predicates
+
+//Predicates
+class Predicates
+{
+public:
+    static bool SameOrderAndSign(double val1, double val2)
+    {
+        //Check sign
+        if(val1*val2 < 0) return false;
+        //Check order
+        if(val1/val2 > 10 || val1/val2 < 0.1) return false;
+        return true;
+    }
+
+};
 
 #endif

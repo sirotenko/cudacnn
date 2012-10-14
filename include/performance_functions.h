@@ -1,6 +1,15 @@
 #ifndef _PERFORMANCE_FUNCTIONS_H
 #define _PERFORMANCE_FUNCTIONS_H
 
+namespace cudacnn
+{
+
+enum ePerfType
+{
+    eMSE,
+    eSSE
+};
+
 template <class T> class PerformanceFunctionBase;
 template <class T> class MSEFunction;
 template <class T> class SSEFunction;
@@ -86,7 +95,7 @@ public:
 	{
 		Tensor<T> out = y;
 		for(UINT i = 0; i < y.num_elements(); ++i)
-			out[i] = 2*y[i]/y.num_elements();
+			out[i] = T(2.)*y[i]/y.num_elements();
 		return out;
 	}
 	inline Tensor<T> d2ydx2(const Tensor<T>& y)
@@ -94,7 +103,8 @@ public:
 		//return Tensor<T>::Ones(y.num_elements()); 
 		Tensor<T> out = y;
 		for(UINT i = 0; i < y.num_elements(); ++i)
-			out[i] = 1;
+			out[i] = T(2.)/y.num_elements();
+            //out[i] = T(2.);
 		return out;
 	}
 };
@@ -120,5 +130,6 @@ public:
 	}
 };
 
+}
 
 #endif
