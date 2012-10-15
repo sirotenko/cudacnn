@@ -16,7 +16,7 @@ function [out, cnet_out] = sim(cnet,inp)
 %
 %(c) Sirotenko Mikhail, 2011
 
-out = cudacnnMex(cnet,'sim',inp);
+out = cudacnnMex(cnet,'sim',single(inp));
 %cnet_out = cudacnnMex(cnet, 'save');
 cnet_out = cnet;
 

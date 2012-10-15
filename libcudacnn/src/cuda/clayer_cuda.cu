@@ -70,8 +70,8 @@ void CLayer<TensorGPU, T, TF>::AdaptWeights(T tau, bool use_hessian, T mu)
 
 //Simple variant. Without extra threads for maximum occupancy
 template <class T, class TF, int nthreads>
-__global__ void Conv2ValidKernel(const TensorDev<T> inputs, const TensorDev<T> kernels, const TensorDev<T> biases,
-								 const TensorDev<int> conn_map, TensorDev<T> outputs)
+__global__ void Conv2ValidKernel(const TensorDev3<T> inputs, const TensorDev4<T> kernels, const TensorDev3<T> biases,
+								 const TensorDev2<int> conn_map, TensorDev3<T> outputs)
 {
 	//__shared__ T smem[nthreads*2];
     T* smem = SharedMemory<T>();
@@ -82,16 +82,16 @@ __global__ void Conv2ValidKernel(const TensorDev<T> inputs, const TensorDev<T> k
 	//int km = threadIdx.z;
 	//output coords
 	int km = blockIdx.y;
-	int y = blockIdx.x / outputs.w();
-	int x = blockIdx.x % outputs.w();
+	int y = blockIdx.x / outputs.w;
+	int x = blockIdx.x % outputs.w;
 	//int tid = threadIdx.z*blockDim.x*blockDim.y + threadIdx.y*blockDim.x + threadIdx.x;
 	int tid = threadIdx.y*blockDim.x + threadIdx.x;
 	kernels_buf[tid] = 0;
 	sum_buf[tid] = 0;
 	T out = 0;
-	if(kx < kernels.w() && ky < kernels.h()) {
+	if(kx < kernels.w && ky < kernels.h) {
 		//Loop for all inputs
-		for(int i = 0; i < inputs.d(); ++i) {
+		for(int i = 0; i < inputs.d; ++i) {
 			//Load kernel into smem
 			kernels_buf[tid] = kernels(kx,ky,i,km);
 			__syncthreads();
@@ -155,19 +155,19 @@ void CLayer<TensorGPU, T, TF>::Propagate(const TensorGPU<T>& layer_input )
 }
 
 template <class T, int nthreads, class TF, bool hessian>
-__global__ void BackpropConvKernel(const TensorDev<T> dedx, const TensorDev<T> weights, const TensorDev<T> outs,
-							   const TensorDev<int> conn_map, unsigned out_idx, TensorDev<T> de_dx_prev)
+__global__ void BackpropConvKernel(const TensorDev3<T> dedx, const TensorDev4<T> weights, const TensorDev3<T> outs,
+							   const TensorDev2<int> conn_map, unsigned out_idx, TensorDev3<T> de_dx_prev)
 {
 	T* sum_buf = SharedMemory<T>();
-	int kx = threadIdx.x % weights.w();
-	int ky = threadIdx.x / weights.w();
+	int kx = threadIdx.x % weights.w;
+	int ky = threadIdx.x / weights.w;
 	//output coords (output is bigger than input)
-	int ix = blockIdx.x % de_dx_prev.w();
-	int iy = blockIdx.x / de_dx_prev.w();
+	int ix = blockIdx.x % de_dx_prev.w;
+	int iy = blockIdx.x / de_dx_prev.w;
 	int im = blockIdx.y;
 
-	int kw = weights.w();
-	int kh = weights.h();
+	int kw = weights.w;
+	int kh = weights.h;
 
 	int y = iy - ky;
 	int x = ix - kx;
@@ -179,7 +179,7 @@ __global__ void BackpropConvKernel(const TensorDev<T> dedx, const TensorDev<T> w
     __syncthreads();
 	if(kx <  kw		  && ky <  kh &&
 	    x >= 0		  && y  >= 0  && 
-		x <  outs.w() && y  <  outs.h()) {
+		x <  outs.w && y  <  outs.h) {
 		//Load kernel into smem
 		TF tf;		
 		T dedy = hessian ? Sqr(tf.dydx(outs(x,y,out_idx)))*dedx(x, y, out_idx): 
@@ -236,36 +236,36 @@ void CLayer<TensorGPU, T, TF>::BackpropagateKernelProxy(const TensorGPU<T>& inpu
 
 
 template <class T, int nthreads, class TF, bool hessian>
-__global__ void ComputeGradientKernel(const TensorDev<T> dedx, const TensorDev<T> weights, const TensorDev<T> outs,
-									  const TensorDev<int> conn_map, const TensorDev<T> inps, TensorDev<T> de_dw, 
-									  TensorDev<T> de_db)
+__global__ void ComputeGradientKernel(const TensorDev3<T> dedx, const TensorDev4<T> weights, const TensorDev3<T> outs,
+									  const TensorDev2<int> conn_map, const TensorDev3<T> inps, TensorDev4<T> de_dw, 
+									  TensorDev3<T> de_db)
 {
 	T *smem = SharedMemory<T>();
 
     //Use many threads of 1 block to process several outputs for increasing occupancy
-	T* sum_buf = smem + threadIdx.y*(nthreads + outs.w()*outs.h());
+	T* sum_buf = smem + threadIdx.y*(nthreads + outs.w*outs.h);
 	T* dedy_buf = sum_buf + nthreads;
 //#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 200 
 //	int im = blockIdx.y;
 //	int om = blockIdx.z*blockDim.y + threadIdx.y;
 //#else
-	int im = blockIdx.y % conn_map.w();
-	int om = (blockIdx.y / conn_map.w())*blockDim.y + threadIdx.y;
+	int im = blockIdx.y % conn_map.w;
+	int om = (blockIdx.y / conn_map.w)*blockDim.y + threadIdx.y;
 //#endif
-	int kx = blockIdx.x % weights.w();
-	int ky = blockIdx.x / weights.w();
+	int kx = blockIdx.x % weights.w;
+	int ky = blockIdx.x / weights.w;
 
 	int tid = threadIdx.x;
 
-	int out_size = outs.w() * outs.h();
-    //cuassert(im < conn_map.w());
-    //cuassert(om < conn_map.h());
+	int out_size = outs.w * outs.h;
+    //cuassert(im < conn_map.w);
+    //cuassert(om < conn_map.h);
 
 	//Compute dedy and put into smem buffer
 	for(int out_idx = 0; out_idx < out_size; out_idx += nthreads){
 		if(tid + out_idx < out_size){
-			int ox = (tid + out_idx) % outs.w();
-			int oy = (tid + out_idx) / outs.w();
+			int ox = (tid + out_idx) % outs.w;
+			int oy = (tid + out_idx) / outs.w;
 
 			TF tf;		
 			T dedy = hessian ? Sqr(tf.dydx(outs(ox,oy,om)))*dedx(ox, oy, om): 
@@ -280,8 +280,8 @@ __global__ void ComputeGradientKernel(const TensorDev<T> dedx, const TensorDev<T
 		//Prepare dedy * input for reduction
 		for(int out_idx = 0; out_idx < out_size; out_idx += nthreads){
 			if(tid + out_idx < out_size){
-				int ox = (tid + out_idx) % outs.w();
-				int oy = (tid + out_idx) / outs.w();
+				int ox = (tid + out_idx) % outs.w;
+				int oy = (tid + out_idx) / outs.w;
 
 				T inp = hessian ? Sqr(inps(ox + kx, oy + ky, im)) : inps(ox + kx, oy + ky, im);
 				sum_buf[tid] += dedy_buf[tid + out_idx] * inp;
@@ -302,8 +302,6 @@ __global__ void ComputeGradientKernel(const TensorDev<T> dedx, const TensorDev<T
 		sum_buf[tid] = 0;
 		for(int out_idx = 0; out_idx < out_size; out_idx += nthreads){
 			if(tid + out_idx < out_size){
-				int ox = (tid + out_idx) % outs.w();
-				int oy = (tid + out_idx) / outs.w();
 				sum_buf[tid] += dedy_buf[tid + out_idx];
 			}
 		}

@@ -102,24 +102,13 @@ for t=1:trainer.epochs
         %Simulating
         [inp, targ, train_datareader] = train_datareader.read(train_datareader,n);
                 
-        [out, cnet_obj] = sim(cnet_obj,single(inp)); 
-        
-        if (max(isnan(out(:))) == 1)
-            %bad output
-            fprintf('Bad CNN Output \n');
-            disp(['Epoch : ' num2str(t)]);
-            disp(['Iter : ' num2str(n)]);
-            cnet = cnn_exec(cnet_obj, 'debug_save');
-            output_locals.out = out;
-            output_locals.inp = inp;
-            return;
-        end
-        
+        [out, cnet] = sim(cnet,single(inp));         
+      
         %Calculate the error
         e = single(out-targ');
         %TODO: this is only true for MSE. Fix it
         e_derriv = 2*e/length(e);        
-        cnn_exec(cnet_obj, 'compute_gradient', e_derriv, single(inp));
+        cudacnnMex(cnet, 'compute_gradient', e_derriv, single(inp));
 
 
         perf(n) = mse(e); %Store the error
@@ -148,6 +137,7 @@ for t=1:trainer.epochs
         if(~isempty(get(h_AbortButton,'UserData')))
             fprintf('Training aborted \n');
             cnet = cudacnnMex(cnet, 'debug_save');
+            evalc('cnet = cnn(cnet,false);'); %Suppress "CNN successfully initialized." message
             return;
         end
     end
