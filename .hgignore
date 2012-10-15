@@ -1,0 +1,9 @@
+syntax: glob
+build/
+*.dir/
+x64/
+*.bak
+CMakeFiles/
+Debug/
+CMakeCache.txt
+*.suo
