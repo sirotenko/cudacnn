@@ -7,7 +7,6 @@
 #  MATLAB_MX_LIBRARY:  path to libmx.lib
 #  MATLAB_ENG_LIBRARY: path to libeng.lib
 #  MATLAB_MEXFILE_EXT: platform-specific extension for mex-files
-
 #=============================================================================
 # Copyright 2005-2009 Kitware, Inc.
 #
@@ -42,11 +41,6 @@
 #=============================================================================
 
 SET(MATLAB_FOUND 0)
-#Check if 32 or 64 bit
-IF(CMAKE_SIZEOF_VOID_P EQUAL 4)
-# Regular x86
-	SET(X86 1)	
-ENDIF(CMAKE_SIZEOF_VOID_P EQUAL 4)
 
 IF(NOT MATLAB_ROOT)
 	SET(MATLAB_MEX_LIBRARY MATLAB_MEX_LIBRARY-NOTFOUND)
@@ -67,11 +61,11 @@ IF(NOT MATLAB_ROOT)
 		ENDFOREACH()
 
 	  IF(${CMAKE_GENERATOR} MATCHES "Visual Studio")
-		IF(X86)
-			SET(MATLAB_LIB_DIR "${MATLAB_ROOT}/extern/lib/win32/microsoft/")
-		ELSE(X86)
+		IF(64BIT)
 			SET(MATLAB_LIB_DIR "${MATLAB_ROOT}/extern/lib/win64/microsoft/")		
-		ENDIF(X86)
+		ELSE(64BIT)
+			SET(MATLAB_LIB_DIR "${MATLAB_ROOT}/extern/lib/win32/microsoft/")			
+		ENDIF(64BIT)
 	  ELSE(${CMAKE_GENERATOR} MATCHES "Visual Studio")
 		IF(MATLAB_FIND_REQUIRED)
 		  MESSAGE(FATAL_ERROR "Generator not compatible: ${CMAKE_GENERATOR}")
@@ -114,25 +108,25 @@ IF(NOT MATLAB_ROOT)
 		  /usr/local/MATLAB/R2008b/
 		  /usr/local/MATLAB/R2008a/  
 		  )	
-		SET (LOOP_VAR "")
-		SET(_MATLAB_ROOT "bin-NOTFOUND")
+		#SET (LOOP_VAR "")
+		#SET(_MATLAB_ROOT "bin-NOTFOUND")
 		FOREACH(LOOP_VAR ${_MATLAB_ROOT_LST})
 			FIND_PATH(_MATLAB_ROOT "bin" ${LOOP_VAR} NO_DEFAULT_PATH)
-			IF(_MATLAB_ROOT)
+			IF(_MATLAB_ROOT)				
 				SET(MATLAB_ROOT ${_MATLAB_ROOT})
 				BREAK()
 			ENDIF()
 		ENDFOREACH()
 		
-	  IF(X86)
-		# Regular x86
-		SET(MATLAB_LIB_DIR "${MATLAB_ROOT}/bin/glnx86/")
-		EXECUTE_PROCESS(COMMAND "${MATLAB_ROOT}/bin/mexext" OUTPUT_VARIABLE MATLAB_MEXFILE_EXT OUTPUT_STRIP_TRAILING_WHITESPACE)
-	  ELSE(X86)
+	  IF(64BIT)
 		# AMD64:
 		SET(MATLAB_LIB_DIR "${MATLAB_ROOT}/bin/glnxa64/")
 		EXECUTE_PROCESS(COMMAND "${MATLAB_ROOT}/bin/mexext" OUTPUT_VARIABLE MATLAB_MEXFILE_EXT OUTPUT_STRIP_TRAILING_WHITESPACE)		
-	  ENDIF(X86)	  
+	  ELSE(64BIT)
+		# Regular x86
+		SET(MATLAB_LIB_DIR "${MATLAB_ROOT}/bin/glnx86/")
+		EXECUTE_PROCESS(COMMAND "${MATLAB_ROOT}/bin/mexext" OUTPUT_VARIABLE MATLAB_MEXFILE_EXT OUTPUT_STRIP_TRAILING_WHITESPACE)
+	  ENDIF(64BIT)	  
 		FIND_LIBRARY(MATLAB_MEX_LIBRARY
 		mex
 		${MATLAB_LIB_DIR}

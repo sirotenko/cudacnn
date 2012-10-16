@@ -89,12 +89,13 @@ void FLayer<TensorGPU,T, TF>::Propagate(const TensorGPU<T>& layer_input )
     TensorGPU<T> flat_input(layer_input, true);
     flat_input.Flatten();
 
-	assert(flat_input.num_elements() == weights().h());
+	assert(flat_input.num_elements() == this->weights().h());
 
-	ApplyWeightsTemplate<T>(cublas_handle_, flat_input, weights(), biases(), out_);
-	dim3 blocks(iDivUp(out().num_elements(),MAX_THREADS),1,1); 
+	ApplyWeightsTemplate<T>(cublas_handle_, flat_input, this->weights(), 
+                this->biases(), this->out_);
+	dim3 blocks(iDivUp(this->out().num_elements(),MAX_THREADS),1,1); 
 	dim3 threads(MAX_THREADS,1,1);
-	ApplyTransferFunction<T,TF><<<blocks, threads>>>(out_, out_);
+	ApplyTransferFunction<T,TF><<<blocks, threads>>>(this->out_, this->out_);
 }
 
 
@@ -149,39 +150,39 @@ template <class T, class TF>
 template <bool hessian>
 inline void FLayer<TensorGPU,T, TF>::BackpropagateKernelProxy(const TensorGPU<T>& input, TensorGPU<T>& dedx_prev)
 {
-	const TensorGPU<T>& de_dw_in = hessian ? d2e_dw2() : de_dw();
-	const TensorGPU<T>& de_db_in = hessian ? d2e_db2() : de_db();
-	const TensorGPU<T>& de_dx_in = hessian ? d2e_dx2() : de_dx();
+	const TensorGPU<T>& de_dw_in = hessian ? this->d2e_dw2() : this->de_dw();
+	const TensorGPU<T>& de_db_in = hessian ? this->d2e_db2() : this->de_db();
+	const TensorGPU<T>& de_dx_in = hessian ? this->d2e_dx2() : this->de_dx();
 
 	dim3 threads(MAX_THREADS);
 	dim3 blocks(iDivUp(de_dx_in.num_elements(), MAX_THREADS)); 
 	TensorGPU<T> dedy(de_dx_in);
-	ApplyTransferFunctionDerriv<T, TF, hessian><<<blocks, threads>>>(out(), de_dx_in, dedy);
+	ApplyTransferFunctionDerriv<T, TF, hessian><<<blocks, threads>>>(this->out(), de_dx_in, dedy);
 	//TODO: fix this. Weights width can be greather than 1024
-    int nthreads = iRoundUpPow2(weights().w());
+        int nthreads = iRoundUpPow2(this->weights().w());
 	threads = dim3(nthreads,1,1);
-	blocks = dim3(1, weights().h(),1); 
-    size_t smem_size = std::max(nthreads*sizeof(T), 64*sizeof(T));
+	blocks = dim3(1, this->weights().h(),1); 
+        size_t smem_size = std::max(nthreads*sizeof(T), 64*sizeof(T));
 	switch(threads.x)
 	{
 	case 1  : FLayerBackpropagateKernel<T, 1 , hessian><<<blocks, threads, smem_size>>>(dedy, input, 
-				weights(), de_dw_in, de_db_in, dedx_prev); break;
+				this->weights(), de_dw_in, de_db_in, dedx_prev); break;
 	case 2  : FLayerBackpropagateKernel<T,2 , hessian><<<blocks, threads, smem_size>>>(dedy, input, 
-				weights(), de_dw_in, de_db_in, dedx_prev); break;
+				this->weights(), de_dw_in, de_db_in, dedx_prev); break;
 	case 4  : FLayerBackpropagateKernel<T,4 , hessian><<<blocks, threads, smem_size>>>(dedy, input, 
-				weights(), de_dw_in, de_db_in, dedx_prev); break;
+				this->weights(), de_dw_in, de_db_in, dedx_prev); break;
 	case 8  : FLayerBackpropagateKernel<T,8 , hessian><<<blocks, threads, smem_size>>>(dedy, input, 
-				weights(), de_dw_in, de_db_in, dedx_prev); break;
+				this->weights(), de_dw_in, de_db_in, dedx_prev); break;
 	case 16 : FLayerBackpropagateKernel<T,16 , hessian><<<blocks, threads, smem_size>>>(dedy, input, 
-				weights(), de_dw_in, de_db_in, dedx_prev); break;
+				this->weights(), de_dw_in, de_db_in, dedx_prev); break;
 	case 32 : FLayerBackpropagateKernel<T,32 , hessian><<<blocks, threads, smem_size>>>(dedy, input, 
-				weights(), de_dw_in, de_db_in, dedx_prev); break;
+				this->weights(), de_dw_in, de_db_in, dedx_prev); break;
 	case 64 : FLayerBackpropagateKernel<T,64 , hessian><<<blocks, threads, smem_size>>>(dedy, input, 
-				weights(), de_dw_in, de_db_in, dedx_prev); break;
+				this->weights(), de_dw_in, de_db_in, dedx_prev); break;
 	case 128: FLayerBackpropagateKernel<T,128 , hessian><<<blocks, threads, smem_size>>>(dedy, input, 
-				weights(), de_dw_in, de_db_in, dedx_prev); break;
+				this->weights(), de_dw_in, de_db_in, dedx_prev); break;
 	case 256: FLayerBackpropagateKernel<T,256 , hessian><<<blocks, threads, smem_size>>>(dedy, input, 
-				weights(), de_dw_in, de_db_in, dedx_prev); break;
+				this->weights(), de_dw_in, de_db_in, dedx_prev); break;
 	default:
 		throw std::runtime_error("Incorrect threads number in BackpropagateKernelProxy");
 	}
@@ -199,9 +200,9 @@ void FLayer<TensorGPU,T, TF>::BackPropagate(const TensorGPU<T>& input, TensorGPU
     TensorGPU<T> flat_dedx_prev(dedx_prev, true);
     flat_dedx_prev.Flatten();
 
-	assert(flat_input.num_elements() == weights().h());
-	assert(de_dw_.HaveSameSize(weights()));
-	assert(de_db_.HaveSameSize(biases()));
+	assert(flat_input.num_elements() == this->weights().h());
+	assert(de_dw_.HaveSameSize(this->weights()));
+	assert(de_db_.HaveSameSize(this->biases()));
 	//Require only the same number of elements, since last CLayer usually flattened
 	assert(flat_dedx_prev.num_elements() == flat_input.num_elements());
 
@@ -219,28 +220,28 @@ void FLayer<TensorGPU,T, TF>::BackPropagateHessian(const TensorGPU<T>& input, Te
     TensorGPU<T> flat_d2edx2_prev(d2edx2_prev, true);
     flat_d2edx2_prev.Flatten();
 
-	assert(flat_input.num_elements() == weights().h());
-	assert(d2e_dw2_.HaveSameSize(weights()));
-	assert(d2e_db2_.HaveSameSize(biases()));
+	assert(flat_input.num_elements() == this->weights().h());
+	assert(this->d2e_dw2_.HaveSameSize(this->weights()));
+	assert(this->d2e_db2_.HaveSameSize(this->biases()));
 	assert(flat_d2edx2_prev.num_elements() == flat_input.num_elements());
 	//Assume this for now. If the weights matrix is bigger than use cublas method
-	assert(weights().w() <= MAX_THREADS);
+	assert(this->weights().w() <= MAX_THREADS);
 	BackpropagateKernelProxy<true>(flat_input, flat_d2edx2_prev);
 	//cutilSafeCall(cudaThreadSynchronize());
-	num_hessian_accums_++;
+	this->num_hessian_accums_++;
 }
 
 template <class T, class TF>
 void FLayer<TensorGPU,T, TF>::AverageHessian()
 {
-	if(num_hessian_accums_)	{
-		dim3 threads(min(512,d2e_dw2_.num_elements()),1,1);
-		dim3 blocks(iDivUp(d2e_dw2_.num_elements(),512));
-		Average<T><<<blocks, threads>>>(d2e_dw2_, num_hessian_accums_);
-		threads = dim3(min(512,d2e_db2_.num_elements()),1,1);
-		blocks = dim3(iDivUp(d2e_db2_.num_elements(),512));
-		Average<T><<<blocks, threads>>>(d2e_db2_, num_hessian_accums_);
-		num_hessian_accums_ = 0;
+	if(this->num_hessian_accums_)	{
+		dim3 threads(min(512,this->d2e_dw2_.num_elements()),1,1);
+		dim3 blocks(iDivUp(this->d2e_dw2_.num_elements(),512));
+		Average<T><<<blocks, threads>>>(this->d2e_dw2_, this->num_hessian_accums_);
+		threads = dim3(min(512,this->d2e_db2_.num_elements()),1,1);
+		blocks = dim3(iDivUp(this->d2e_db2_.num_elements(),512));
+		Average<T><<<blocks, threads>>>(this->d2e_db2_, this->num_hessian_accums_);
+		this->num_hessian_accums_ = 0;
 	}
 }
 
@@ -249,15 +250,15 @@ void FLayer<TensorGPU,T, TF>::AdaptWeights(T tau, bool use_hessian, T mu)
 {
 	dim3 threads(MAX_THREADS);
 	if(use_hessian){
-		dim3 blocks(iDivUp(weights().num_elements(),MAX_THREADS));
-		AdaptWeightsKernel<T><<<threads,blocks>>>(weights(), tau, mu, de_dw(), d2e_dw2()); 
-		blocks = dim3(iDivUp(biases().num_elements(),MAX_THREADS));
-		AdaptWeightsKernel<T><<<threads,blocks>>>(biases(), tau, mu, de_db(), d2e_db2()); 
+		dim3 blocks(iDivUp(this->weights().num_elements(),MAX_THREADS));
+		AdaptWeightsKernel<T><<<threads,blocks>>>(this->weights(), tau, mu, this->de_dw(), this->d2e_dw2()); 
+		blocks = dim3(iDivUp(this->biases().num_elements(),MAX_THREADS));
+		AdaptWeightsKernel<T><<<threads,blocks>>>(this->biases(), tau, mu, this->de_db(), this->d2e_db2()); 
 	}else{
-		dim3 blocks(iDivUp(weights().num_elements(),MAX_THREADS));
-		AdaptWeightsKernel<T><<<threads,blocks>>>(weights(), tau, de_dw());
-		blocks = dim3(iDivUp(biases().num_elements(),MAX_THREADS));
-		AdaptWeightsKernel<T><<<threads,blocks>>>(biases(), tau, de_db());
+		dim3 blocks(iDivUp(this->weights().num_elements(),MAX_THREADS));
+		AdaptWeightsKernel<T><<<threads,blocks>>>(this->weights(), tau, this->de_dw());
+		blocks = dim3(iDivUp(this->biases().num_elements(),MAX_THREADS));
+		AdaptWeightsKernel<T><<<threads,blocks>>>(this->biases(), tau, this->de_db());
 	}
 }
 
@@ -265,17 +266,17 @@ template <class T, class TF>
 template <bool hessian>
 void FLayer<TensorGPU, T, TF>::ComputeGradientKernelProxy(const TensorGPU<T>& input)
 {
-	const TensorGPU<T>& de_dw_in = hessian ? d2e_dw2() : de_dw();
-	const TensorGPU<T>& de_db_in = hessian ? d2e_db2() : de_db();
-	const TensorGPU<T>& de_dx_in = hessian ? d2e_dx2() : de_dx();
+	const TensorGPU<T>& de_dw_in = hessian ? this->d2e_dw2() : this->de_dw();
+	const TensorGPU<T>& de_db_in = hessian ? this->d2e_db2() : this->de_db();
+	const TensorGPU<T>& de_dx_in = hessian ? this->d2e_dx2() : this->de_dx();
 
 	dim3 threads(MAX_THREADS);
 	dim3 blocks(iDivUp(de_dx_in.num_elements(), MAX_THREADS)); 
 	TensorGPU<T> dedy(de_dx_in);
-	ApplyTransferFunctionDerriv<T, TF, hessian><<<blocks, threads>>>(out(), de_dx_in, dedy);
+	ApplyTransferFunctionDerriv<T, TF, hessian><<<blocks, threads>>>(this->out(), de_dx_in, dedy);
 	//TODO: fix this. Weights width can be greather than 1024
-	threads = dim3(iRoundUpPow2(weights().w()),1,1);
-	blocks = dim3(1, weights().h(),1); 
+	threads = dim3(iRoundUpPow2(this->weights().w()),1,1);
+	blocks = dim3(1, this->weights().h(),1); 
 	FLayerComputeDerrivKernel<T, hessian><<<blocks, threads>>>(dedy, input, de_dw_in, de_db_in);
 	cutilCheckMsg("Failed to compute derrivative in FLayer");
 }
@@ -298,7 +299,7 @@ void FLayer<TensorGPU, T, TF>::ComputeHessian(const TensorGPU<T>& input)
     TensorGPU<T> flat_input(input, true);
     flat_input.Flatten();
 	ComputeGradientKernelProxy<true>(flat_input);
-	num_hessian_accums_++;
+	this->num_hessian_accums_++;
 }
 
 #endif //HAVE_CUDA

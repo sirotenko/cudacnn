@@ -9,7 +9,7 @@ ENDIF(COMMAND CMAKE_POLICY)
 project(cudacnn)
 #Script debug
 #SET( CMAKE_VERBOSE_MAKEFILE on )
-SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMake)
+SET(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMake)
 
 if(UNIX)
   set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /lib /usr/lib)
@@ -80,12 +80,35 @@ include(cudacnnPCHSupport.cmake REQUIRED)
 #endif()
 #set(ENABLE_OPENMP ${DEFAULT_ENABLE_OPENMP} CACHE BOOL "")
 
-# ----------------------------------------------------------------------------
-# 64-bit detection:
-# ----------------------------------------------------------------------------
-IF( (CMAKE_SIZEOF_VOID_P EQUAL 8) OR CMAKE_CL_64)
-  SET(HAVE_64_BIT 1)
-ENDIF( (CMAKE_SIZEOF_VOID_P EQUAL 8) OR CMAKE_CL_64)
+#Taken from eblearn and slightly changed
+# determine machine architecture
+################################################################################
+IF (APPLE) # MAC OS
+  SET (MAC true)
+  SET (OS_NAME "Mac")
+ELSE (APPLE)
+  IF("${CMAKE_SYSTEM}" MATCHES "Linux")
+    SET (LINUX true)
+    SET (OS_NAME "Linux")
+  ELSE ("${CMAKE_SYSTEM}" MATCHES "Linux")
+    SET (WINDOWS true)
+    SET (OS_NAME "Windows")
+  ENDIF("${CMAKE_SYSTEM}" MATCHES "Linux")
+ENDIF (APPLE)
+
+SET(BITSIZE "32")
+SET(64BIT false) # default is 32 bits
+IF (APPLE OR LINUX)
+  EXEC_PROGRAM("uname -m" OUTPUT_VARIABLE ARCH_NAME)
+  STRING(COMPARE EQUAL ${ARCH_NAME} "x86_64" 64BIT)
+ELSE (APPLE OR LINUX)
+  STRING(COMPARE EQUAL $ENV{PROCESSOR_ARCHITECTURE} "AMD64" 64BIT)
+ENDIF (APPLE OR LINUX)
+IF (64BIT)
+  SET(BITSIZE "64")
+ENDIF (64BIT)
+
+MESSAGE(STATUS "Target OS is ${OS_NAME} (${BITSIZE} bits)")
 
 # ----------------------------------------------------------------------------
 # Detect GNU version:

@@ -149,7 +149,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
 	if (mxGetM(prhs[1])!=1)
 		mexErrMsgTxt("Input must be a row vector.");
 	/* get the length of the input string */
-	mwSize buflen = (mxGetM(prhs[1]) * mxGetN(prhs[1])) + 1;
+	//mwSize buflen = (mxGetM(prhs[1]) * mxGetN(prhs[1])) + 1;
 	/* copy the string data from prhs[0] into a C string input_ buf.    */
 	char* input_buf = mxArrayToString(prhs[1]);
 	if(strcmp(input_buf,"init")==0)	{

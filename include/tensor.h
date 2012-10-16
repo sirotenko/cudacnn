@@ -34,7 +34,7 @@ class BTensor {
 public:
 	typedef T element_type;
 	// Constructors
-	BTensor(): 	data_(NULL), shallow_(false), dims_(0) {};
+	BTensor(): dims_(0), data_(NULL), shallow_(false)  {};
 	//Pure virtual 
 	virtual void ZeroMemory() = 0;
 	//Utility
@@ -145,9 +145,19 @@ public:
 	inline T  operator() (unsigned x, unsigned y, unsigned n) const;
 	inline T&  operator() (unsigned x, unsigned y);
 	inline T  operator() (unsigned x, unsigned y) const;
+	//Getters. Repeat here to avoid this-> because of non-dependent type problem
+	inline T* data() const { return BTensor<T>::data(); }
+	inline size_t num_dims() const { return BTensor<T>::num_dims(); }
+	inline const std::vector<unsigned>& dims() const { return BTensor<T>::dims(); }
+        inline unsigned num_elements() const { return BTensor<T>::num_elements(); };
+	inline unsigned w() const { return BTensor<T>::w(); }
+	inline unsigned h() const { return BTensor<T>::h(); }
+	inline unsigned d() const { return BTensor<T>::d(); }
+	inline unsigned d2() const { return BTensor<T>::d2(); }        
+        
 
 protected:
-	virtual void Destroy() { if(!shallow_)	DeallocateMemory();};
+	virtual void Destroy() { if(!this->shallow_)	DeallocateMemory();};
 	virtual void AllocateMemory();
 	virtual void DeallocateMemory();
 };
@@ -162,15 +172,15 @@ typedef Tensor<int> TensorInt;
 template <class T>
 Tensor<T>::Tensor(const std::vector<unsigned>& dims_in, T* data_in)
 {
-	shallow_ = true;
-	dims_ = dims_in;
-	data_ = data_in;
+	this->shallow_ = true;
+	this->dims_ = dims_in;
+	this->data_ = data_in;
 }
 
 template<class T>
 Tensor<T>::Tensor(const std::vector<unsigned>& dims_in)
 {
-	dims_ = dims_in;
+	this->dims_ = dims_in;
 	AllocateMemory();
 }
 
@@ -182,7 +192,7 @@ Tensor<T>::Tensor(int iw, int ih, int im)
 	in_dims[0] = iw;
 	in_dims[1] = ih;
 	in_dims[2] = im;
-	dims_ = in_dims;
+	this->dims_ = in_dims;
 	AllocateMemory();
 }
 
@@ -192,9 +202,9 @@ Tensor<T>::Tensor(const Tensor<T>& tens, bool shallow)
     if(!shallow){
         *this = tens;
     }else {
-        data_ = tens.data_;
-        dims_ = tens.dims_;
-        shallow_ = shallow; //True
+        this->data_ = tens.data_;
+        this->dims_ = tens.dims_;
+        this->shallow_ = shallow; //True
     }
     
 }
@@ -202,20 +212,20 @@ Tensor<T>::Tensor(const Tensor<T>& tens, bool shallow)
 template<class T>
 void Tensor<T>::AllocateMemory()
 {
-	data_ = new T[num_elements()];
-	memset(data_, 0, num_elements()*sizeof(T));
+	this->data_ = new T[num_elements()];
+	memset(this->data_, 0, num_elements()*sizeof(T));
 }
 
 template<class T>
 void Tensor<T>::DeallocateMemory()
 {
-	delete[] data_; data_ = NULL;
+	delete[] this->data_; this->data_ = NULL;
 }
 
 template<class T>
 void Tensor<T>::ZeroMemory()
 {
-	memset(data_, 0, num_elements()*sizeof(T));
+	memset(this->data_, 0, num_elements()*sizeof(T));
 }
 
 template<class T>
@@ -244,9 +254,9 @@ Tensor<T>& Tensor<T>::operator = (const Tensor<T> &rhs)
 	if (this == &rhs)      // Same object?
 		return *this;
 	Destroy();
-	dims_ = rhs.dims();
+	this->dims_ = rhs.dims();
 	AllocateMemory();
-	memcpy(data_,rhs.data(),sizeof(T)*num_elements());
+	memcpy(this->data_,rhs.data(),sizeof(T)*num_elements());
 	return *this;
 }
 
@@ -255,9 +265,9 @@ Tensor<T>& Tensor<T>::operator=(const TensorGPU<T> &rhs)
 {
 #ifdef HAVE_CUDA
 	Destroy();
-	dims_ = rhs.dims();
+	this->dims_ = rhs.dims();
 	AllocateMemory();
-	cutilSafeCall(cudaMemcpy(data_,rhs.data(),sizeof(T)*num_elements(), cudaMemcpyDeviceToHost));
+	cutilSafeCall(cudaMemcpy(this->data_,rhs.data(),sizeof(T)*num_elements(), cudaMemcpyDeviceToHost));
 	return *this;
 #else
     std::runtime_error("cudacnnlib was compiled without CUDA support");
@@ -279,13 +289,13 @@ template<class T>
 inline T& Tensor<T>::operator [](unsigned idx)
 {
 	assert(idx < num_elements());
-	return data_[idx];
+	return this->data_[idx];
 }
 template<class T>
 inline const T& Tensor<T>::operator [](unsigned idx) const
 {
 	assert(idx < num_elements());
-	return data_[idx];
+	return this->data_[idx];
 }
 
 template<class T>
@@ -293,7 +303,7 @@ inline T& Tensor<T>::operator() (unsigned x, unsigned y, unsigned m, unsigned n)
 {
 	assert(num_dims() <= 4);
 	assert(x < w() && y < h() && m < d() && n < d2());
-	return data_[n*d()*w()*h() + m*w()*h() + y*w() + x ];
+	return this->data_[n*d()*w()*h() + m*w()*h() + y*w() + x ];
 }
 
 template<class T>
@@ -301,7 +311,7 @@ inline T  Tensor<T>::operator() (unsigned x, unsigned y, unsigned m, unsigned n)
 {
 	assert(num_dims() <= 4);
 	assert(x < w() && y < h() && m < d() && n < d2());
-	return data_[n*d()*w()*h() + m*w()*h() + y*w() + x ];
+	return this->data_[n*d()*w()*h() + m*w()*h() + y*w() + x ];
 }
 
 
@@ -310,7 +320,7 @@ inline T& Tensor<T>::operator() (unsigned x, unsigned y, unsigned n)
 {
 	assert(num_dims() <= 3);	
 	assert(x < w() && y < h() && n < d());
-	return data_[n*w()*h() + x + y*w()];
+	return this->data_[n*w()*h() + x + y*w()];
 }
 
 template<class T>
@@ -318,21 +328,21 @@ inline T  Tensor<T>::operator() (unsigned x, unsigned y, unsigned n) const
 {
 	assert(num_dims() <= 3);
 	assert(x < w() && y < h() && n < d());
-	return data_[n*w()*h() + x + y*w()];
+	return this->data_[n*w()*h() + x + y*w()];
 }
 template<class T>
 inline T&  Tensor<T>::operator() (unsigned x, unsigned y)
 {
 	assert(num_dims() <= 2);
 	assert(x < w() && y < h());
-	return data_[x + y*w()];
+	return this->data_[x + y*w()];
 }
 template<class T>
 inline T  Tensor<T>::operator() (unsigned x, unsigned y) const
 {
 	assert(num_dims() <= 2);
 	assert(x < w() && y < h());
-	return data_[x + y*w()];
+	return this->data_[x + y*w()];
 }
 
 #ifdef HAVE_CUDA
@@ -357,8 +367,17 @@ public:
 	inline const T& operator [](unsigned idx) const;
 	inline T& operator() (unsigned x, unsigned y, unsigned n);
 	inline T  operator() (unsigned x, unsigned y, unsigned n) const;
+	//Getters. Repeat here to avoid this-> because of non-dependent type problem
+	inline T* data() const { return BTensor<T>::data(); }
+	inline size_t num_dims() const { return BTensor<T>::num_dims(); }
+	inline const std::vector<unsigned>& dims() const { return BTensor<T>::dims(); }
+        inline unsigned num_elements() const { return BTensor<T>::num_elements(); };
+	inline unsigned w() const { return BTensor<T>::w(); }
+	inline unsigned h() const { return BTensor<T>::h(); }
+	inline unsigned d() const { return BTensor<T>::d(); }
+	inline unsigned d2() const { return BTensor<T>::d2(); }        
 protected:
-	virtual void Destroy() { if(!shallow_)	DeallocateMemory();};
+	virtual void Destroy() { if(!this->shallow_)	DeallocateMemory();};
 	virtual void AllocateMemory();
 	virtual void DeallocateMemory();
 };
@@ -370,15 +389,15 @@ typedef TensorGPU<int> TensorGPUInt;
 template <class T>
 TensorGPU<T>::TensorGPU(const std::vector<unsigned>& dims_in, T* data_in)
 {
-	shallow_ = true;
-	dims_ = dims_in;
-	data_ = data_in;
+	this->shallow_ = true;
+	this->dims_ = dims_in;
+	this->data_ = data_in;
 }
 
 template<class T>
 TensorGPU<T>::TensorGPU(const std::vector<unsigned>& dims_in)
 {
-	dims_ = dims_in;
+	this->dims_ = dims_in;
 	AllocateMemory();
 }
 
@@ -390,7 +409,7 @@ TensorGPU<T>::TensorGPU(int iw, int ih, int im)
 	in_dims[0] = iw;
 	in_dims[1] = ih;
 	in_dims[2] = im;
-	dims_ = in_dims;
+	this->dims_ = in_dims;
 	AllocateMemory();
 }
 
@@ -400,36 +419,36 @@ TensorGPU<T>::TensorGPU(const TensorGPU<T>& tens, bool shallow /* = false */)
     if(!shallow){	
         *this = tens;	
     } else {
-        data_ = tens.data_;
-        dims_ = tens.dims_;
-        shallow_ = shallow; //true
+        this->data_ = tens.data_;
+        this->dims_ = tens.dims_;
+        this->shallow_ = shallow; //true
     }
 }
 
 template<class T>
 void TensorGPU<T>::AllocateMemory()
 {	
-	cutilSafeCall(cudaMalloc((void**)&(data_),sizeof(T)*num_elements()));
-	cutilSafeCall(cudaMemset(data_,0,sizeof(T)*num_elements()));
+	cutilSafeCall(cudaMalloc((void**)&(this->data_),sizeof(T)*num_elements()));
+	cutilSafeCall(cudaMemset(this->data_,0,sizeof(T)*num_elements()));
 }
 
 template<class T>
 void TensorGPU<T>::DeallocateMemory()
 {
-	if(data_)	{
+	if(this->data_)	{
 		//cutilSafeCall(cudaFree((void*)data_));
 		//Don't use cutilSafeCall since it can raise exception
 		//Usually if cudaFree is not succeed something fatal happened in kernel and next 
 		//call of any cuda function will also be unsucsessfull
-		cudaFree((void*)data_);
-		data_ = NULL;
+		cudaFree((void*)this->data_);
+		this->data_ = NULL;
 	}
 }
 
 template<class T>
 void TensorGPU<T>::ZeroMemory()
 {
-	cutilSafeCall(cudaMemset(data_,0,sizeof(T)*num_elements()));
+	cutilSafeCall(cudaMemset(this->data_,0,sizeof(T)*num_elements()));
 }
 
 
@@ -439,9 +458,10 @@ TensorGPU<T>& TensorGPU<T>::operator =(const TensorGPU<T>& rhs )
 	if (this == &rhs)      // Same object?
 		return *this;
 	Destroy();
-	dims_ = rhs.dims();
+	this->dims_ = rhs.dims();
 	AllocateMemory();
-	cutilSafeCall(cudaMemcpy(data_,rhs.data(),sizeof(T)*num_elements(), cudaMemcpyDeviceToDevice));
+	cutilSafeCall(cudaMemcpy(this->data_,rhs.data(),sizeof(T)*num_elements(), 
+                cudaMemcpyDeviceToDevice));
 	return *this;
 }
 template<class T>
@@ -450,9 +470,9 @@ TensorGPU<T>& TensorGPU<T>::operator =(const Tensor<T>& rhs )
 //	if (this == &rhs)      // Same object?
 //		return *this;
 	Destroy();
-	dims_  = rhs.dims();
+	this->dims_  = rhs.dims();
 	AllocateMemory();
-	cutilSafeCall(cudaMemcpy(data_,rhs.data(),sizeof(T)*num_elements(), cudaMemcpyHostToDevice));
+	cutilSafeCall(cudaMemcpy(this->data_,rhs.data(),sizeof(T)*this->num_elements(), cudaMemcpyHostToDevice));
 	return *this;
 }
 #endif 

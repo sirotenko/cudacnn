@@ -121,58 +121,58 @@ __global__ void MaxPoolingKernel(const TensorDev3<T> inputs, TensorDev3<T> outpu
 template <class T>
 void PoolingLayer<TensorGPU, T>::Propagate(const TensorGPU<T>& layer_input )
 {
-	dim3 blocks(out().w()*out().h(),out().d(),1); 
-	int nthreads = iRoundUpPow2(sx_*sy_);
+	dim3 blocks(this->out().w()*this->out().h(),this->out().d(),1); 
+	int nthreads = iRoundUpPow2(this->sx_*this->sy_);
 	dim3 threads(nthreads,1,1);
-    switch(pooling_type_)
+    switch(this->pooling_type_)
     {
         //Without cast CUDA compiler gives a warning that expression must be an integral type
-    case static_cast<int>(eAverage):
+    case static_cast<int>(PoolingLayer<TensorGPU, T>::eAverage):
 	    switch(nthreads)
 	    {
 	    case 1  : SubsampleKernel<T, 1 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 2  : SubsampleKernel<T, 2 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 4  : SubsampleKernel<T, 4 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 8  : SubsampleKernel<T, 8 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 16 : SubsampleKernel<T, 16 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 32 : SubsampleKernel<T, 32 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 64 : SubsampleKernel<T, 64 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 128: SubsampleKernel<T, 128 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 256: SubsampleKernel<T, 256 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    default:
 		    throw std::runtime_error("Incorrect threads number in Propagate");
 	    }
         break;
-    case static_cast<int>(eMax):
+    case static_cast<int>(PoolingLayer<TensorGPU, T>::eMax):
 	    switch(nthreads)
 	    {
 	    case 1  : MaxPoolingKernel<T, 1 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 2  : MaxPoolingKernel<T, 2 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 4  : MaxPoolingKernel<T, 4 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 8  : MaxPoolingKernel<T, 8 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 16 : MaxPoolingKernel<T, 16 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 32 : MaxPoolingKernel<T, 32 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 64 : MaxPoolingKernel<T, 64 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 128: MaxPoolingKernel<T, 128 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    case 256: MaxPoolingKernel<T, 256 ><<<blocks, threads>>>(layer_input,  
-				     out_); break;
+				     this->out_); break;
 	    default:
 		    throw std::runtime_error("Incorrect threads number in Propagate");
 	    }
@@ -222,13 +222,13 @@ template <class T>
 template <bool hessian>
 void PoolingLayer<TensorGPU, T>::BackpropagateKernelProxy(const TensorGPU<T>& input, const TensorGPU<T>& dedx_prev)
 {
-	const TensorGPU<T>& de_dx_in = hessian ? d2e_dx2() : de_dx();
-	dim3 blocks(out().w()*out().h(),out().d(),1); 
-	int nthreads = iRoundUpPow2(sx_*sy_);
+	const TensorGPU<T>& de_dx_in = hessian ? this->d2e_dx2() : this->de_dx();
+	dim3 blocks(this->out().w()*this->out().h(),this->out().d(),1); 
+	int nthreads = iRoundUpPow2(this->sx_*this->sy_);
 	dim3 threads(nthreads,1,1);
-    switch(pooling_type_)
+    switch(this->pooling_type_)
     {
-    case static_cast<int>(eAverage):
+    case static_cast<int>(PoolingLayer<TensorGPU, T>::eAverage):
 	    switch(nthreads)
 	    {
 	    case 1  : BakpropagateSubsampleKernel<T, 1 , hessian><<<blocks, threads>>>(de_dx_in,  
@@ -253,26 +253,26 @@ void PoolingLayer<TensorGPU, T>::BackpropagateKernelProxy(const TensorGPU<T>& in
 		    throw std::runtime_error("Incorrect threads number in Propagate");
 	    }
         break;
-    case static_cast<int>(eMax):
+    case static_cast<int>(PoolingLayer<TensorGPU, T>::eMax):
 	    switch(nthreads)
 	    {
-	    case 1  : BakpropagateMaxPoolingKernel<T, 1 , hessian><<<blocks, threads>>>(input, out_, de_dx_in,  
+	    case 1  : BakpropagateMaxPoolingKernel<T, 1 , hessian><<<blocks, threads>>>(input, this->out_, de_dx_in,  
 				      dedx_prev); break;
-	    case 2  : BakpropagateMaxPoolingKernel<T, 2 , hessian><<<blocks, threads>>>(input, out_, de_dx_in,  
+	    case 2  : BakpropagateMaxPoolingKernel<T, 2 , hessian><<<blocks, threads>>>(input, this->out_, de_dx_in,  
 				      dedx_prev); break;
-	    case 4  : BakpropagateMaxPoolingKernel<T, 4 , hessian><<<blocks, threads>>>(input, out_, de_dx_in,  
+	    case 4  : BakpropagateMaxPoolingKernel<T, 4 , hessian><<<blocks, threads>>>(input, this->out_, de_dx_in,  
 				      dedx_prev); break;
-	    case 8  : BakpropagateMaxPoolingKernel<T, 8 , hessian><<<blocks, threads>>>(input, out_, de_dx_in,  
+	    case 8  : BakpropagateMaxPoolingKernel<T, 8 , hessian><<<blocks, threads>>>(input, this->out_, de_dx_in,  
 				      dedx_prev); break;
-	    case 16 : BakpropagateMaxPoolingKernel<T, 16 , hessian><<<blocks, threads>>>(input, out_, de_dx_in,  
+	    case 16 : BakpropagateMaxPoolingKernel<T, 16 , hessian><<<blocks, threads>>>(input, this->out_, de_dx_in,  
 				      dedx_prev); break;
-	    case 32 : BakpropagateMaxPoolingKernel<T, 32 , hessian><<<blocks, threads>>>(input, out_, de_dx_in,  
+	    case 32 : BakpropagateMaxPoolingKernel<T, 32 , hessian><<<blocks, threads>>>(input, this->out_, de_dx_in,  
 				      dedx_prev); break;
-	    case 64 : BakpropagateMaxPoolingKernel<T, 64 , hessian><<<blocks, threads>>>(input, out_, de_dx_in,  
+	    case 64 : BakpropagateMaxPoolingKernel<T, 64 , hessian><<<blocks, threads>>>(input, this->out_, de_dx_in,  
 				      dedx_prev); break;
-	    case 128: BakpropagateMaxPoolingKernel<T, 128 , hessian><<<blocks, threads>>>(input, out_, de_dx_in,  
+	    case 128: BakpropagateMaxPoolingKernel<T, 128 , hessian><<<blocks, threads>>>(input, this->out_, de_dx_in,  
 				      dedx_prev); break;
-	    case 256: BakpropagateMaxPoolingKernel<T, 256 , hessian><<<blocks, threads>>>(input, out_, de_dx_in,  
+	    case 256: BakpropagateMaxPoolingKernel<T, 256 , hessian><<<blocks, threads>>>(input, this->out_, de_dx_in,  
 				      dedx_prev); break;
 	    default:
 		    throw std::runtime_error("Incorrect threads number in Propagate");

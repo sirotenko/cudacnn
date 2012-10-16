@@ -33,16 +33,16 @@ template class PoolingLayer<Tensor,double>;
 template<class T>
 void PoolingLayer<Tensor,T>::PropagateAverage(const Tensor<T>& input)
 {
-        for(unsigned n = 0; n < out_.d(); n++){
-            for(unsigned y = 0; y < out_.h(); y++){
-                for(unsigned x = 0; x < out_.w(); x++) {
+        for(unsigned n = 0; n < this->out_.d(); n++){
+            for(unsigned y = 0; y < this->out_.h(); y++){
+                for(unsigned x = 0; x < this->out_.w(); x++) {
                     T sum = 0;
-                    for(UINT syi = 0; syi < sy_; ++syi){
-                        for(UINT sxi = 0; sxi < sx_; ++sxi){
-                            sum += input(x*sx_+sxi, y*sy_+syi, n);
+                    for(UINT syi = 0; syi < this->sy_; ++syi){
+                        for(UINT sxi = 0; sxi < this->sx_; ++sxi){
+                            sum += input(x*this->sx_+sxi, y*this->sy_+syi, n);
                         }
                     }
-                    out_(x,y,n) = sum/(sy_*sx_);
+                    this->out_(x,y,n) = sum/(this->sy_*this->sx_);
                 }
             }
         }
@@ -50,16 +50,16 @@ void PoolingLayer<Tensor,T>::PropagateAverage(const Tensor<T>& input)
 template<class T>
 void PoolingLayer<Tensor,T>::PropagateMax(const Tensor<T>& input)
 {
-    for(unsigned n = 0; n < out_.d(); n++){
-        for(unsigned y = 0; y < out_.h(); y++){
-            for(unsigned x = 0; x < out_.w(); x++) {
-                T max_val = input(x*sx_, y*sy_, n); // first elem
-                for(UINT syi = 0; syi < sy_; ++syi){
-                    for(UINT sxi = 0; sxi < sx_; ++sxi){
-                        max_val = std::max(max_val, input(x*sx_+sxi, y*sy_+syi, n));
+    for(unsigned n = 0; n < this->out_.d(); n++){
+        for(unsigned y = 0; y < this->out_.h(); y++){
+            for(unsigned x = 0; x < this->out_.w(); x++) {
+                T max_val = input(x*this->sx_, y*this->sy_, n); // first elem
+                for(UINT syi = 0; syi < this->sy_; ++syi){
+                    for(UINT sxi = 0; sxi < this->sx_; ++sxi){
+                        max_val = std::max(max_val, input(x*this->sx_+sxi, y*this->sy_+syi, n));
                     }
                 }
-                out_(x,y,n) = max_val;
+                this->out_(x,y,n) = max_val;
             }
         }
     }
@@ -69,12 +69,12 @@ void PoolingLayer<Tensor,T>::PropagateMax(const Tensor<T>& input)
 template<class T>
 void PoolingLayer<Tensor,T>::Propagate(const Tensor<T>& input)
 {
-	assert(out_.w() == input.w()/sx_ && out_.h() == input.h()/sy_);
-    switch(pooling_type_){
-        case eAverage:
+	assert(this->out_.w() == input.w()/this->sx_ && this->out_.h() == input.h()/this->sy_);
+    switch(this->pooling_type_){
+        case PoolingLayer<Tensor,T>::eAverage:
             PropagateAverage(input);
             break;
-        case eMax:
+        case PoolingLayer<Tensor,T>::eMax:
             PropagateMax(input);
             break;
         default:
@@ -88,16 +88,16 @@ template<class T>
 template<bool hessian>
 void PoolingLayer<Tensor,T>::BackPropagateTemplateAverage(const Tensor<T>& input, Tensor<T>& dedx_prev)
 {
-	Tensor<T>& de_dx_t = hessian ? d2e_dx2_ : de_dx_;
+	Tensor<T>& de_dx_t = hessian ? this->d2e_dx2_ : this->de_dx_;
 
 	assert(dedx_prev.HaveSameSize(input));
 
-	for(unsigned n = 0; n < out_.d(); n++){
-		for(unsigned y = 0; y < out_.h(); y++){
-			for(unsigned x = 0; x < out_.w(); x++) {
-				for(UINT syi = 0; syi < sy_; ++syi){
-					for(UINT sxi = 0; sxi < sx_; ++sxi){
-						dedx_prev(x*sx_+sxi, y*sy_+syi, n) = de_dx_t(x,y,n)/(sy_*sx_);
+	for(unsigned n = 0; n < this->out_.d(); n++){
+		for(unsigned y = 0; y < this->out_.h(); y++){
+			for(unsigned x = 0; x < this->out_.w(); x++) {
+				for(UINT syi = 0; syi < this->sy_; ++syi){
+					for(UINT sxi = 0; sxi < this->sx_; ++sxi){
+						dedx_prev(x*this->sx_+sxi, y*this->sy_+syi, n) = de_dx_t(x,y,n)/(this->sy_*this->sx_);
 					}
 				}
 			}
@@ -108,18 +108,18 @@ template<class T>
 template<bool hessian>
 void PoolingLayer<Tensor,T>::BackPropagateTemplateMax(const Tensor<T>& input, Tensor<T>& dedx_prev)
 {
-    Tensor<T>& de_dx_t = hessian ? d2e_dx2_ : de_dx_;
+    Tensor<T>& de_dx_t = hessian ? this->d2e_dx2_ : this->de_dx_;
 
     assert(dedx_prev.HaveSameSize(input));
 
-    for(unsigned n = 0; n < out_.d(); n++){
-        for(unsigned y = 0; y < out_.h(); y++){
-            for(unsigned x = 0; x < out_.w(); x++) {
-                for(UINT syi = 0; syi < sy_; ++syi){
-                    for(UINT sxi = 0; sxi < sx_; ++sxi){
-                        dedx_prev(x*sx_+sxi, y*sy_+syi, n) =  
+    for(unsigned n = 0; n < this->out_.d(); n++){
+        for(unsigned y = 0; y < this->out_.h(); y++){
+            for(unsigned x = 0; x < this->out_.w(); x++) {
+                for(UINT syi = 0; syi < this->sy_; ++syi){
+                    for(UINT sxi = 0; sxi < this->sx_; ++sxi){
+                        dedx_prev(x*this->sx_+sxi, y*this->sy_+syi, n) =  
                             //Check if this is the input corresponding to max out
-                            input(x*sx_+sxi, y*sy_+syi, n) == out_(x,y,n) ? de_dx_t(x,y,n) : 0;
+                            input(x*this->sx_+sxi, y*this->sy_+syi, n) == this->out_(x,y,n) ? de_dx_t(x,y,n) : 0;
                         //TODO: some issues with floats equality test?
                     }
                 }
@@ -133,11 +133,11 @@ void PoolingLayer<Tensor,T>::BackPropagateTemplateMax(const Tensor<T>& input, Te
 template <class T>
 void PoolingLayer<Tensor,T>::BackPropagateHessian(const Tensor<T>& input, Tensor<T>& d2edx2_prev)
 {
-    switch(pooling_type_){
-        case eAverage:
+    switch(this->pooling_type_){
+        case PoolingLayer<Tensor,T>::eAverage:
             BackPropagateTemplateAverage<true>(input, d2edx2_prev);
             break;
-        case eMax:
+        case PoolingLayer<Tensor,T>::eMax:
             BackPropagateTemplateMax<true>(input, d2edx2_prev);
             break;
         default:
@@ -151,11 +151,11 @@ void PoolingLayer<Tensor,T>::BackPropagateHessian(const Tensor<T>& input, Tensor
 template <class T>
 void PoolingLayer<Tensor,T>::BackPropagate(const Tensor<T>& input, Tensor<T>& dedx_prev)
 {
-    switch(pooling_type_){
-        case eAverage:
+    switch(this->pooling_type_){
+        case PoolingLayer<Tensor,T>::eAverage:
             BackPropagateTemplateAverage<false>(input, dedx_prev);
             break;
-        case eMax:
+        case PoolingLayer<Tensor,T>::eMax:
             BackPropagateTemplateMax<false>(input, dedx_prev);
             break;
         default:

@@ -2,7 +2,8 @@ project(cudacnnlib)
 
 set(the_target "cudacnn")
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include"
+		"${CMAKE_CURRENT_SOURCE_DIR}/src")
 file(GLOB lib_srcs "src/*.cpp")
 file(GLOB lib_cuda "src/cuda/*.cu*")
 
@@ -37,9 +38,10 @@ if (HAVE_CUDA)
 endif()
 
 if(CUDACNN_BUILD_SHARED_LIB)
-	add_library(${the_target} SHARED ${lib_srcs} ${lib_cuda} ${lib_hdrs} ${cuda_objs})
+	#add_library(${the_target} SHARED ${lib_srcs} ${lib_cuda} ${lib_hdrs} ${cuda_objs})
+	add_library(${the_target} SHARED ${lib_srcs} ${lib_hdrs} ${cuda_objs})
 else(CUDACNN_BUILD_SHARED_LIB)
-	add_library(${the_target} STATIC ${lib_srcs} ${lib_cuda} ${lib_hdrs} ${cuda_objs})
+	add_library(${the_target} STATIC ${lib_srcs} ${lib_hdrs} ${cuda_objs})
 endif(CUDACNN_BUILD_SHARED_LIB)
 
 if(PCHSupport_FOUND)

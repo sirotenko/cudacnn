@@ -160,12 +160,12 @@ struct TensorDev2 : public TensorDev1<T>
 	}
 	__device__ inline T& operator() (unsigned x, unsigned y)
 	{
-		assert(x < w && y < h);
+		assert(x < this->w && y < h);
 		return this->data[x*this->stridex + y*stridey];
 	}
 	__device__ inline T  operator() (unsigned x, unsigned y) const
 	{
-		assert(x < w && y < h);
+		assert(x < this->w && y < h);
 		return this->data[x*this->stridex + y*stridey];
 	}
 };
@@ -182,12 +182,12 @@ struct TensorDev3 : public TensorDev2<T>
 	}
 	__device__ inline T& operator() (unsigned x, unsigned y, unsigned n)
 	{
-		assert(x < w && y < h && n < d);
+		assert(x < this->w && y < this->h && n < this->d);
 		return this->data[n*striden + y*this->stridey + x*this->stridex];
 	}
 	__device__ inline T operator() (unsigned x, unsigned y, unsigned n) const
 	{
-		assert(x < w && y < h && n < d);
+		assert(x < this->w && y < this->h && n < this->d);
 		return this->data[n*striden + y*this->stridey + x*this->stridex];
 	}
 };
@@ -204,12 +204,12 @@ struct TensorDev4 : public TensorDev3<T>
 	}
 	__device__ inline T& operator() (unsigned x, unsigned y, unsigned n, unsigned m)
 	{
-		assert(x < w && y < h && n < d && m < d2);
+		assert(x < this->w && y < this->h && n < this->d && m < this->d2);
 		return this->data[m*stridem + n*this->striden + y*this->stridey + x*this->stridex];
 	}
 	__device__ inline T operator() (unsigned x, unsigned y, unsigned n, unsigned m) const
 	{
-		assert(x < w && y < h && n < d && m < d2);
+		assert(x < this->w && y < this->h && n < this->d && m < this->d2);
 		return this->data[m*stridem + n*this->striden + y*this->stridey + x*this->stridex];
 	}
 };

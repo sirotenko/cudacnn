@@ -60,28 +60,28 @@ template<class T, class TF>
 void CLayer<Tensor,T, TF>::Propagate(const Tensor<T>& input)
 {
 	//throw std::runtime_error("Not implemented");
-	out_.ZeroMemory();
+	this->out_.ZeroMemory();
 	//Shortcut
-	const Tensor<T>& wm = weights(); //Weights is 4-dim tensor
-	for (unsigned no = 0; no < weights().d2(); ++no) {
+	const Tensor<T>& wm = this->weights(); //Weights is 4-dim tensor
+	for (unsigned no = 0; no < this->weights().d2(); ++no) {
 		for (unsigned ni = 0; ni < input.d(); ++ni) {
 			//Output
-			if(con_map_[ni + no*input.d()]== 0) continue;  //Skip
-			for (unsigned y = 0; y < out_.h(); ++y) {
-				for (unsigned x = 0; x < out_.w(); ++x) {
+			if(this->con_map_[ni + no*input.d()]== 0) continue;  //Skip
+			for (unsigned y = 0; y < this->out_.h(); ++y) {
+				for (unsigned x = 0; x < this->out_.w(); ++x) {
 					//Kernel
 					for (unsigned kx = 0; kx < wm.w(); ++kx) {
 						for (unsigned ky = 0; ky < wm.h(); ++ky) {
-							out_(x,y,no) += input(x+kx, y+ky, ni) * wm(kx,ky,ni,no);
+							this->out_(x,y,no) += input(x+kx, y+ky, ni) * wm(kx,ky,ni,no);
 						}
 					}					
 				}
 			}
 		}
-		for (unsigned y = 0; y < out_.h(); ++y) {
-			for (unsigned x = 0; x < out_.w(); ++x) {
-				out_(x,y,no) += biases_[no]; 
-				out_(x,y,no) = transfer_function_(out_(x,y,no));
+		for (unsigned y = 0; y < this->out_.h(); ++y) {
+			for (unsigned x = 0; x < this->out_.w(); ++x) {
+				this->out_(x,y,no) += this->biases_[no]; 
+				this->out_(x,y,no) = this->transfer_function_(this->out_(x,y,no));
 			}
 		}
 
@@ -99,12 +99,12 @@ template<class T, class TF>
 template<bool hessian>
 void CLayer<Tensor,T, TF>::BackPropagateTemplate(const Tensor<T>& input, Tensor<T>& de_dx_prev)
 {
-	Tensor<T>& de_dw_t = hessian ? d2e_dw2_ : de_dw_;
-	Tensor<T>& de_db_t = hessian ? d2e_db2_ : de_db_;
-	Tensor<T>& de_dx_t = hessian ? d2e_dx2_ : de_dx_;
-	assert(de_dw_t.HaveSameSize(weights()));
-	assert(de_db_t.HaveSameSize(biases()));
-	assert(de_dx_t.HaveSameSize(out()));
+	Tensor<T>& de_dw_t = hessian ? this->d2e_dw2_ : this->de_dw_;
+	Tensor<T>& de_db_t = hessian ? this->d2e_db2_ : this->de_db_;
+	Tensor<T>& de_dx_t = hessian ? this->d2e_dx2_ : this->de_dx_;
+	assert(de_dw_t.HaveSameSize(this->weights()));
+	assert(de_db_t.HaveSameSize(this->biases()));
+	assert(de_dx_t.HaveSameSize(this->out()));
 
 	if(!hessian){
 		de_dw_t.ZeroMemory();
@@ -112,24 +112,24 @@ void CLayer<Tensor,T, TF>::BackPropagateTemplate(const Tensor<T>& input, Tensor<
 	}
 	de_dx_prev.ZeroMemory();
 
-	for (UINT no = 0; no < weights().d2(); ++no) {
+	for (UINT no = 0; no < this->weights().d2(); ++no) {
 		for (UINT ni = 0; ni < input.d(); ++ni) {
 			//dEdB independent from connection matrix
 
-			if(con_map_[ni + no*input.d()]== 0) continue;  //Skip
+			if(this->con_map_[ni + no*input.d()]== 0) continue;  //Skip
 
 			for (unsigned y = 0; y < de_dx_t.h(); ++y) {
 				for (unsigned x = 0; x < de_dx_t.w(); ++x) {
-					T dedy = hessian ? Sqr(transfer_function_.dydx(out_(x,y,no)))*de_dx_t(x,y,no) : 
-						transfer_function_.dydx(out_(x,y,no))*de_dx_t(x,y,no);
-					for (int ky = weights_.h() - 1; ky >= 0; --ky) {
-						for (int kx = weights_.w() - 1; kx >= 0; --kx) {
+					T dedy = hessian ? Sqr(this->transfer_function_.dydx(this->out_(x,y,no)))*de_dx_t(x,y,no) : 
+						this->transfer_function_.dydx(this->out_(x,y,no))*de_dx_t(x,y,no);
+					for (int ky = this->weights_.h() - 1; ky >= 0; --ky) {
+						for (int kx = this->weights_.w() - 1; kx >= 0; --kx) {
 							//Calc gradients
 							T inp = hessian ? Sqr(input(x+kx, y+ky, ni)) : input(x+kx, y+ky, ni);
 
 							de_dw_t(kx, ky, ni, no) += inp * dedy;							
-							de_dx_prev(x + kx, y + ky, ni) += hessian ?  dedy*Sqr(weights_(kx,ky,ni, no)) : 
-								dedy*weights_(kx,ky,ni,no);							
+							de_dx_prev(x + kx, y + ky, ni) += hessian ?  dedy*Sqr(this->weights_(kx,ky,ni, no)) : 
+								dedy*this->weights_(kx,ky,ni,no);							
 						} //kx
 					} //ky
 				} //x
@@ -137,8 +137,8 @@ void CLayer<Tensor,T, TF>::BackPropagateTemplate(const Tensor<T>& input, Tensor<
 		}
 		for (unsigned y = 0; y < de_dx_t.h(); ++y) {
 			for (unsigned x = 0; x < de_dx_t.w(); ++x) {
-				T dedy = hessian ? Sqr(transfer_function_.dydx(out_(x,y,no)))*de_dx_t(x,y,no) : 
-					transfer_function_.dydx(out_(x,y,no))*de_dx_t(x,y,no);
+				T dedy = hessian ? Sqr(this->transfer_function_.dydx(this->out_(x,y,no)))*de_dx_t(x,y,no) : 
+					this->transfer_function_.dydx(this->out_(x,y,no))*de_dx_t(x,y,no);
 				de_db_t[no] += dedy;
 			}
 		}
@@ -150,30 +150,30 @@ template<class T, class TF>
 template<bool hessian>
 void CLayer<Tensor,T, TF>::ComputeDerrivativeTemplate(const Tensor<T>& input)
 {
-	Tensor<T>& de_dw_t = hessian ? d2e_dw2_ : de_dw_;
-	Tensor<T>& de_db_t = hessian ? d2e_db2_ : de_db_;
-	Tensor<T>& de_dx_t = hessian ? d2e_dx2_ : de_dx_;
-	assert(de_dw_t.HaveSameSize(weights()));
-	assert(de_db_t.HaveSameSize(biases()));
-	assert(de_dx_t.HaveSameSize(out()));
+	Tensor<T>& de_dw_t = hessian ? this->d2e_dw2_ : this->de_dw_;
+	Tensor<T>& de_db_t = hessian ? this->d2e_db2_ : this->de_db_;
+	Tensor<T>& de_dx_t = hessian ? this->d2e_dx2_ : this->de_dx_;
+	assert(de_dw_t.HaveSameSize(this->weights()));
+	assert(de_db_t.HaveSameSize(this->biases()));
+	assert(de_dx_t.HaveSameSize(this->out()));
 
 	if(!hessian){
 		de_dw_t.ZeroMemory();
 		de_db_t.ZeroMemory();
 	}
 
-	for (UINT no = 0; no < weights().d2(); ++no) {
+	for (UINT no = 0; no < this->weights().d2(); ++no) {
 		for (UINT ni = 0; ni < input.d(); ++ni) {
 			//dEdB independent from connection matrix
 
-			if(con_map_[ni + no*input.d()]== 0) continue;  //Skip
+			if(this->con_map_[ni + no*input.d()]== 0) continue;  //Skip
 
 			for (unsigned y = 0; y < de_dx_t.h(); ++y) {
 				for (unsigned x = 0; x < de_dx_t.w(); ++x) {
-					T dedy = hessian ? Sqr(transfer_function_.dydx(out_(x,y,no)))*de_dx_t(x,y,no) : 
-						transfer_function_.dydx(out_(x,y,no))*de_dx_t(x,y,no);
-				for (int ky = weights_.h() - 1; ky >= 0; --ky) {
-					for (int kx = weights_.w() - 1; kx >= 0; --kx) {
+					T dedy = hessian ? Sqr(this->transfer_function_.dydx(this->out_(x,y,no)))*de_dx_t(x,y,no) : 
+						this->transfer_function_.dydx(this->out_(x,y,no))*de_dx_t(x,y,no);
+				for (int ky = this->weights_.h() - 1; ky >= 0; --ky) {
+					for (int kx = this->weights_.w() - 1; kx >= 0; --kx) {
 						//Calc gradients
 						T inp = hessian ? Sqr(input(x+kx, y+ky, ni)) : input(x+kx, y+ky, ni);
 						de_dw_t(kx, ky, ni, no) += inp * dedy;							
@@ -184,8 +184,8 @@ void CLayer<Tensor,T, TF>::ComputeDerrivativeTemplate(const Tensor<T>& input)
 		}
 		for (unsigned y = 0; y < de_dx_t.h(); ++y) {
 			for (unsigned x = 0; x < de_dx_t.w(); ++x) {
-				T dedy = hessian ? Sqr(transfer_function_.dydx(out_(x,y,no)))*de_dx_t(x,y,no) : 
-					transfer_function_.dydx(out_(x,y,no))*de_dx_t(x,y,no);
+				T dedy = hessian ? Sqr(this->transfer_function_.dydx(this->out_(x,y,no)))*de_dx_t(x,y,no) : 
+					this->transfer_function_.dydx(this->out_(x,y,no))*de_dx_t(x,y,no);
 			de_db_t[no] += dedy;
 			}
 		}
@@ -197,7 +197,7 @@ template<class T, class TF>
 void CLayer<Tensor,T, TF>::BackPropagateHessian(const Tensor<T>& input, Tensor<T>& d2edx2_prev) 
 {
 	BackPropagateTemplate<true>(input, d2edx2_prev);
-	num_hessian_accums_++;
+	this->num_hessian_accums_++;
 }
 
 /* Compute gradient without backpropagating errors */
@@ -211,39 +211,39 @@ template<class T, class TF>
 void CLayer<Tensor,T, TF>::ComputeHessian(const Tensor<T>& input)
 {
 	ComputeDerrivativeTemplate<true>(input);
-	num_hessian_accums_++;
+	this->num_hessian_accums_++;
 }
 
 template<class T, class TF>
 void CLayer<Tensor,T, TF>::AverageHessian()
 {
-	if(num_hessian_accums_){
-		for(UINT i = 0; i < d2e_dw2_.num_elements(); ++i){
-			d2e_dw2_[i] /= num_hessian_accums_;
+	if(this->num_hessian_accums_){
+		for(UINT i = 0; i < this->d2e_dw2_.num_elements(); ++i){
+			this->d2e_dw2_[i] /= this->num_hessian_accums_;
 		}
-		for(UINT i = 0; i < d2e_db2_.num_elements(); ++i){
-			d2e_db2_[i] /= num_hessian_accums_;
+		for(UINT i = 0; i < this->d2e_db2_.num_elements(); ++i){
+			this->d2e_db2_[i] /= this->num_hessian_accums_;
 		}
 	}
-	num_hessian_accums_ = 0;
+	this->num_hessian_accums_ = 0;
 }
 
 template<class T, class TF>
 void CLayer<Tensor,T, TF>::AdaptWeights(T tau, bool use_hessian, T mu)
 {
 	if(use_hessian){
-		for(UINT i = 0; i < weights().num_elements(); ++i) {
-			weights_[i] -= de_dw()[i]*tau/(d2e_dw2()[i] + mu);
+		for(UINT i = 0; i < this->weights().num_elements(); ++i) {
+			this->weights_[i] -= this->de_dw()[i]*tau/(this->d2e_dw2()[i] + mu);
 		}
-		for(UINT i = 0; i < biases().num_elements(); ++i) {
-			biases_[i] -= de_db()[i]*tau/(d2e_dw2()[i] + mu);
+		for(UINT i = 0; i < this->biases().num_elements(); ++i) {
+			this->biases_[i] -= this->de_db()[i]*tau/(this->d2e_dw2()[i] + mu);
 		}
 	}else{
-		for(UINT i = 0; i < weights().num_elements(); ++i) {
-			weights_[i] -= de_dw()[i]*tau;
+		for(UINT i = 0; i < this->weights().num_elements(); ++i) {
+			this->weights_[i] -= this->de_dw()[i]*tau;
 		}
-		for(UINT i = 0; i < biases().num_elements(); ++i) {
-			biases_[i] -= de_db()[i]*tau;
+		for(UINT i = 0; i < this->biases().num_elements(); ++i) {
+			this->biases_[i] -= this->de_db()[i]*tau;
 		}
 	}
 }
