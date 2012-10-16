@@ -92,7 +92,6 @@ private:
     template <bool hessian>
     void BackpropagateKernelProxy(const TensorGPU<T>& input, TensorGPU<T>& dedx_prev){ std::runtime_error("cudacnn lib compiled without CUDA support");};
 
-	cublasHandle_t cublas_handle_;
 };
 #endif //HAVE_CUDA
 typedef FLayer<TensorGPU, float, TansigMod<float> > FLayerCudaFTS;

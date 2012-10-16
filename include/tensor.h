@@ -253,11 +253,16 @@ Tensor<T>& Tensor<T>::operator = (const Tensor<T> &rhs)
 template<class T>
 Tensor<T>& Tensor<T>::operator=(const TensorGPU<T> &rhs)
 {
+#ifdef HAVE_CUDA
 	Destroy();
 	dims_ = rhs.dims();
 	AllocateMemory();
 	cutilSafeCall(cudaMemcpy(data_,rhs.data(),sizeof(T)*num_elements(), cudaMemcpyDeviceToHost));
 	return *this;
+#else
+    std::runtime_error("cudacnnlib was compiled without CUDA support");
+    return *this;
+#endif    
 }
 
 template<class T>
@@ -330,6 +335,7 @@ inline T  Tensor<T>::operator() (unsigned x, unsigned y) const
 	return data_[x + y*w()];
 }
 
+#ifdef HAVE_CUDA
 template <class T>
 class TensorGPU : public BTensor<T>
 {
@@ -449,6 +455,7 @@ TensorGPU<T>& TensorGPU<T>::operator =(const Tensor<T>& rhs )
 	cutilSafeCall(cudaMemcpy(data_,rhs.data(),sizeof(T)*num_elements(), cudaMemcpyHostToDevice));
 	return *this;
 }
+#endif 
 
 } //namespace cudacnn
 #endif

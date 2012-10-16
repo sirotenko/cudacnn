@@ -32,7 +32,7 @@ addpath('../m_files');
 
 %%
 %Load the digits into workspace
-mnist_train_reader.num_samples = 30000;
+mnist_train_reader.num_samples = 60000;
 mnist_train_reader.current = 1;
 mnist_train_reader.data_file = '../data/MNIST/train-images.idx3-ubyte';
 mnist_train_reader.label_file = '../data/MNIST/train-labels.idx1-ubyte';
@@ -150,7 +150,7 @@ trainer.TrainMethod = 'StochasticLM';
 % HcalcMode = 1 - Mini batch hessian recomputation
 % HcalcMode = 2 - Running estimate hessian
 trainer.HcalcMode = 1;
-trainer.Hrecalc = 300; %Number of iterations to passs for Hessian recalculation
+trainer.Hrecalc = 1000; %Number of iterations to passs for Hessian recalculation
 trainer.HrecalcSamplesNum = 30; %Number of samples for Hessian recalculation
 trainer.MCRUpdatePeriod = 1000;
 trainer.MCRSubsetSize = 300;
@@ -158,10 +158,7 @@ trainer.RMSEUpdatePeriod = 30;
 
 %Images preprocessing. Resulting images have 0 mean and 1 standard
 %deviation. 
-%[inp_train, targ_train] = preproc_mnist_data(I,num_training_samples,labels,0);
-%[inp_test, targ_test] = preproc_mnist_data(I_test,100,labels_test,0);
 %Actualy training
-%cnnet = train(cnnet, trainer, inp_train, targ_train, inp_test, targ_test);
 cnnet = train(cnnet, trainer, mnist_train_reader, mnist_test_reader);
 
 

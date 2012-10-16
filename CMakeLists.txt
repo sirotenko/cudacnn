@@ -57,17 +57,6 @@ else()
 endif()
 
 # ----------------------------------------------------------------------------
-# Build static or dynamic libs?
-# ----------------------------------------------------------------------------
-# Default: dynamic libraries:
-SET(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
-IF(BUILD_SHARED_LIBS)
-    SET(CUDACNN_BUILD_SHARED_LIB 1) # For cnnconfig.h, etc.
-ELSE(BUILD_SHARED_LIBS)
-    SET(CUDACNN_BUILD_SHARED_LIB 0)
-ENDIF(BUILD_SHARED_LIBS)
-
-# ----------------------------------------------------------------------------
 #  Variables for cnnconfig.h.cmake
 # ----------------------------------------------------------------------------
 set(PACKAGE "cudacnn")
@@ -144,6 +133,21 @@ if(CMAKE_COMPILER_IS_GNUCXX)
         set(ENABLE_SSE42 OFF CACHE BOOL "Enable SSE4.2 instructions")
     endif()
 endif()
+
+# ----------------------------------------------------------------------------
+# Build static or dynamic libs?
+# ----------------------------------------------------------------------------
+# Default: dynamic libraries:
+IF(CMAKE_COMPILER_IS_GNUCXX)
+	SET(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
+ELSE(CMAKE_COMPILER_IS_GNUCXX)
+	SET(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)")
+ENDIF(CMAKE_COMPILER_IS_GNUCXX)
+IF(BUILD_SHARED_LIBS)
+    SET(CUDACNN_BUILD_SHARED_LIB 1) # For cnnconfig.h, etc.
+ELSE(BUILD_SHARED_LIBS)
+    SET(CUDACNN_BUILD_SHARED_LIB 0)
+ENDIF(BUILD_SHARED_LIBS)
 
 ############################### Boost ################################
 if(CMAKE_COMPILER_IS_GNUCXX)

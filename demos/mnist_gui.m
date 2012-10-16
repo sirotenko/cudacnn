@@ -30,8 +30,8 @@ mMNISTFile      =   './MNIST/t10k-images-idx3-ubyte'; %fullfile(matlabroot,'./')
 Images = {0};
 im_ptr = 1;
 autorecognition =   false;
-tmp             =   load('cnet.mat');
-cnet            =   tmp.sinet;
+tmp             =   load('mnist_cnet.mat');
+cnet            =   tmp.cnnet;
 
 % Create all the UI objects in this GUI here so that they can
 % be used in any functions in this GUI
@@ -66,7 +66,7 @@ hIconFileEdit   =   uicontrol(...
                     'Units','characters',...
                     'HorizontalAlignment','left',...
                     'Position',[19.8 32.9 78.2 1.62],...
-                    'String','Create a new icon or type in an icon image file for editing',...
+                    'String','Please specify path to MNIST dataset file',...
                     'Enable','inactive',...
                     'Style','edit',...
                     'ButtondownFcn',@hIconFileEditButtondownFcn,...
@@ -529,9 +529,9 @@ function out = preproc_image(id)
     out = zeros(32);
     out(3:30,3:30) = Inorm;
     if sum(out(:))>0,
-        out = reshape(mapstd(out(:)'), 32, 32);
+        gain = 1./ std(out(:));
+        out = (out - mean(out(:))).*gain;        
     end
-    
 end
 function I = readMNIST_image(filepath,num)
     %readMNIST_image MNIST handwriten image database reading. Reads only images

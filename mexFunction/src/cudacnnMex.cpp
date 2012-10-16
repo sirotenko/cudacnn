@@ -274,9 +274,31 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
 		{
 			mexErrMsgTxt(e.what());
 		}
-		
-
 	}
+    else if(strcmp(input_buf,"reset_hessian")==0) {
+        if(!cnn) mexErrMsgTxt("CNN must be initialized first");
+        if (nrhs != 2) {
+            std::stringstream ss;
+            ss<<"Not enough input arguments. Usage: \n";
+            ss<<"cudacnnMex(cnn, 'reset_hessian'), where \n";
+            ss<<"cnn - convolutional neural network class object \n";
+            mexErrMsgTxt(ss.str().c_str());
+        }
+        try		
+        {			
+            cnn->ResetHessian();
+        }
+#ifdef HAVE_CUDA
+        catch(CudaException& e)	
+        {
+            mexErrMsgTxt(e.what());
+        }
+#endif
+        catch(std::runtime_error& e) 
+        {
+            mexErrMsgTxt(e.what());
+        }		
+    }
 	else if(strcmp(input_buf,"compute_gradient")==0) {
 		if(!cnn) mexErrMsgTxt("CNN must be initialized first");
 		if (nrhs != 4) {
