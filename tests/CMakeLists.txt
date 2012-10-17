@@ -2,7 +2,9 @@ project(tests)
 
 set(the_target "tests")
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/")
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/
+	${CMAKE_SOURCE_DIR}/include
+	${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 file(GLOB lib_srcs "*.cpp")
 file(GLOB lib_int_hdrs "*.h*")
 
@@ -39,8 +41,8 @@ endif()
 
  		
 # Add the required libraries for linking:
-target_link_libraries(${the_target} cudacnn ${GTEST_LIBRARIES} ${CUDACNN_LINKER_LIBS})
-
+target_link_libraries(${the_target} cudacnn ${GTEST_LIBRARIES} ${CUDACNN_LINKER_LIBS} gtest gtest_main)
+add_dependencies(${the_target} gtest)
 if(MSVC)
 	if(CMAKE_CROSSCOMPILING)
 		set_target_properties(${the_target} PROPERTIES

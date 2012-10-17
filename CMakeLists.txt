@@ -24,6 +24,7 @@ if (NOT CMAKE_INSTALL_PREFIX)
 endif()
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
+set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build configuration" FORCE)
 set(WITH_CUDA ON CACHE BOOL "Build cuda version of library")
 set(WITH_HDF5 OFF CACHE BOOL "HDF5 library to save and load neural networks")
 
@@ -242,26 +243,28 @@ if(WITH_HDF5)
 	if (HDF5_FOUND)
 		set(HAVE_HDF5 1)
 		message(STATUS "HDF5 found")		
-		include_directories(${HDF5_INCLUDE_DIRS})	
 	else()
 		message(STATUS "HDF5 not found. Please specify the paths to HDF5 libs and headers")
-		set(HDF5_INCLUDE_DIRS "" CACHE PATH "HDF5: include path")
-		set(HDF5_MAIN_LIBRARY "" CACHE PATH "HDF5: hdf5 lib path")				
-		set(HDF5_CPP_LIBRARY "" CACHE PATH "HDF5: hdf5_cpp lib path")				
-		SET(HDF5_LIBRARIES
-		  ${HDF5_MAIN_LIBRARY}
-		  ${HDF5_CPP_LIBRARY}
-		)
-		
 	endif()		
+	#In windows FindHDF5 sometimes give strange results, so need to check this and fix manually if needed
+	set(HDF5_INCLUDE_DIRS ${HDF5_INCLUDE_DIRS} CACHE PATH "HDF5: include path" FORCE)
+	set(HDF5_LIBRARIES ${HDF5_LIBRARIES} CACHE PATH "HDF5: hdf5 lib path" FORCE)	
+	message(STATUS "HDF5_INCLUDE_DIRS = ${HDF5_INCLUDE_DIRS}")
+	message(STATUS "HDF5_LIBRARIES = ${HDF5_LIBRARIES}")
+	include_directories(${HDF5_INCLUDE_DIRS})	
 endif()
 ############################### GTest ################################
 if(BUILD_TESTS)
-	find_package(GTest REQUIRED)
-	if (GTEST_FOUND)
-		set(HAVE_GTEST 1)
-		message(STATUS "GTest found")		
-	endif()		
+	#set(GTEST_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/3rdParty/gtest)
+	#find_package(GTest REQUIRED)
+	#if (GTEST_FOUND)
+#		set(HAVE_GTEST 1)
+#		message(STATUS "GTest found")		
+#	endif()		
+#Instead of using find_package the recommendation is to include gtest sources and build 
+#https://groups.google.com/forum/?fromgroups=#!topic/googletestframework/zHy-rrKz_Ho
+	add_subdirectory(3rdParty/gtest)
+	enable_testing(true)
 endif()
 
 
@@ -423,12 +426,12 @@ endif()
 
 # Add user supplied extra options (optimization, etc...)
 # ==========================================================
-set(CUDACNN_EXTRA_C_FLAGS "" CACHE STRING "Extra compiler options")
-set(CUDACNN_EXTRA_C_FLAGS_RELEASE "" CACHE STRING "Extra compiler options for Release build")
-set(CUDACNN_EXTRA_C_FLAGS_DEBUG "" CACHE STRING "Extra compiler options for Debug build")
-set(CUDACNN_EXTRA_EXE_LINKER_FLAGS "" CACHE STRING "Extra linker flags" FORCE)
-set(CUDACNN_EXTRA_EXE_LINKER_FLAGS_RELEASE "" CACHE STRING "Extra linker flags for Release build" FORCE)
-set(CUDACNN_EXTRA_EXE_LINKER_FLAGS_DEBUG "" CACHE STRING "Extra linker flags for Debug build" FORCE)
+#set(CUDACNN_EXTRA_C_FLAGS "" CACHE STRING "Extra compiler options")
+#set(CUDACNN_EXTRA_C_FLAGS_RELEASE "" CACHE STRING "Extra compiler options for Release build")
+#set(CUDACNN_EXTRA_C_FLAGS_DEBUG "" CACHE STRING "Extra compiler options for Debug build")
+#set(CUDACNN_EXTRA_EXE_LINKER_FLAGS "" CACHE STRING "Extra linker flags" FORCE)
+#set(CUDACNN_EXTRA_EXE_LINKER_FLAGS_RELEASE "" CACHE STRING "Extra linker flags for Release build" FORCE)
+#set(CUDACNN_EXTRA_EXE_LINKER_FLAGS_DEBUG "" CACHE STRING "Extra linker flags for Debug build" FORCE)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_C_FLAGS} ${CUDACNN_EXTRA_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EXTRA_C_FLAGS} ${CUDACNN_EXTRA_C_FLAGS}")

@@ -31,7 +31,6 @@
 #include <iostream>
 #include <time.h>
 #include <memory>
-//#include <array>
 #include <list>
 
 #include "gtest/gtest.h"
@@ -40,37 +39,8 @@
 
 #include "exceptions.h"
 
-
-#ifdef HAVE_HDF5
-//TODO: Find out why it's different and fix if possible
-#ifdef _WIN32
-#include "cpp/H5Cpp.h"
-#else
-#include "H5Cpp.h"
-#endif  //_WIN32
-
-#include "hdf5_helper.h"
-
-#endif //HAVE_HDF5
-
-
-#include "layer.hpp"
-
-#include "clayer_cuda.h"
-#include "player_cuda.h"
-#include "flayer_cuda.h"
-
-#include "clayer.h"
-#include "player.h"
-#include "flayer.h"
-
-#include "transfer_functions.h"
-#include "performance_functions.h"
-#include "conv_net.h"
+#include "cudacnn.h"
 
 #include "tests_common.h"
 
-
-
-
-#endif
+#endif //__CUDACNNTESTS_PRECOMP_H__

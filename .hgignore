@@ -7,3 +7,4 @@ CMakeFiles/
 Debug/
 CMakeCache.txt
 *.suo
+3rdParty/

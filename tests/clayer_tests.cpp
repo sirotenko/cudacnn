@@ -43,9 +43,9 @@ protected:
 		weights = TensorGPUFloat(wdims);
 
 		std::vector<UINT> bdims;
-		bdims.push_back(2); // shrinkage params num = 2
+		bdims.push_back(1); 
 		bdims.push_back(4);
-		biases = TensorGPUFloat(bdims);  // shrinkage params num = 2
+		biases = TensorGPUFloat(bdims);  
 
 		std::vector<UINT> dims(2);
 		dims[0] = inputs.d();
@@ -70,8 +70,8 @@ protected:
 		for (unsigned i = 0; i < weightsHost.num_elements(); i++) {
 			weightsHost[i] = 1.f;
 		}
-		for (unsigned i = 0; i < tf_paramsHost.num_elements(); i++) {
-			tf_paramsHost[i] = 0.f;
+		for (unsigned i = 0; i < biasesHost.num_elements(); i++) {
+			biasesHost[i] = 0.f;
 		}
 		for (unsigned i = 0; i < outputsHost.num_elements(); i++) {
 			outputsHost[i] = 0.f;
@@ -82,7 +82,7 @@ protected:
 
 		inputs = inputsHost;
 		weights = weightsHost;
-		tf_params = tf_paramsHost;
+		biases = biasesHost;
 		outputs = outputsHost;
         conn_map = connHost;
     }
@@ -94,8 +94,8 @@ protected:
 		for (unsigned i = 0; i < weightsHost.num_elements(); i++) {
 			weightsHost[i] = 1.f;
 		}
-		for (unsigned i = 0; i < tf_paramsHost.num_elements(); i++) {
-			tf_paramsHost[i] = 0.0f;
+		for (unsigned i = 0; i < biasesHost.num_elements(); i++) {
+			biasesHost[i] = 0.0f;
 		}
 		for (unsigned i = 0; i < outputsHost.num_elements(); i++) {
 			outputsHost[i] = 0.f;
@@ -106,7 +106,7 @@ protected:
 
 		inputs = inputsHost;
 		weights = weightsHost;
-		tf_params = tf_paramsHost;
+		biases = biasesHost;
 		outputs = outputsHost;
         conn_map = connHost;
     }
@@ -120,11 +120,8 @@ protected:
 		for (unsigned i = 0; i < weightsHost.num_elements(); i++) {
 			weightsHost[i] = float(std::rand()) / RAND_MAX;
 		}
-        for (unsigned i = 0; i < tf_paramsHost.num_elements(); i++) {
-            tf_paramsHost[i] = float(std::rand()) / RAND_MAX;
-        }
-        for (unsigned i = 0; i < tf_paramsHost2.num_elements(); i++) {
-            tf_paramsHost2[i] = 1.0f + float(std::rand()) / RAND_MAX;
+        for (unsigned i = 0; i < biasesHost.num_elements(); i++) {
+            biasesHost[i] = float(std::rand()) / RAND_MAX;
         }
 		for (unsigned i = 0; i < outputsHost.num_elements(); i++) {
 			outputsHost[i] = 0.f;
@@ -135,8 +132,7 @@ protected:
 
 		inputs = inputsHost;
 		weights = weightsHost;
-		tf_params = tf_paramsHost;
-        tf_params2 = tf_paramsHost2;
+		biases = biasesHost;
 		outputs = outputsHost;
         conn_map = connHost;
     }
@@ -151,9 +147,9 @@ protected:
 			//weightsHost[i] = float(i) / inputsHost.num_elements();
             weightsHost[i] = float(i % 100);
 		}
-		for (unsigned i = 0; i < tf_paramsHost.num_elements(); i++) {
-			//tf_paramsHost[i] = float(i) / inputsHost.num_elements();
-            tf_paramsHost[i] = float(i % 100);
+		for (unsigned i = 0; i < biasesHost.num_elements(); i++) {
+			//biasesHost[i] = float(i) / inputsHost.num_elements();
+            biasesHost[i] = float(i % 100);
 		}
 		for (unsigned i = 0; i < outputsHost.num_elements(); i++) {
 			outputsHost[i] = 0.f;
@@ -165,7 +161,7 @@ protected:
 
 		inputs = inputsHost;
 		weights = weightsHost;
-		tf_params = tf_paramsHost;
+		biases = biasesHost;
 		outputs = outputsHost;
         conn_map = connHost;
     }
@@ -208,9 +204,9 @@ TEST_F(CLayerTest, BackPropZeros)
 	for(unsigned i = 0; i < de_dw_host.num_elements(); ++i){
 		ASSERT_NEAR(de_dw_host[i], 0.f, std::numeric_limits<float>::epsilon());
 	}
-	TensorFloat de_dp_host = clayer.de_dp();
-	for(unsigned i = 0; i < de_dp_host.num_elements(); ++i){
-		ASSERT_NEAR(de_dp_host[i], 0.f, std::numeric_limits<float>::epsilon());
+	TensorFloat de_db_host = clayer.de_db();
+	for(unsigned i = 0; i < de_db_host.num_elements(); ++i){
+		ASSERT_NEAR(de_db_host[i], 0.f, std::numeric_limits<float>::epsilon());
 	}
 }
 
@@ -226,9 +222,9 @@ TEST_F(CLayerTest, ComputeDerivZeros)
 	for(unsigned i = 0; i < de_dw_host.num_elements(); ++i){
 		ASSERT_NEAR(de_dw_host[i], 0.f, std::numeric_limits<float>::epsilon());
 	}
-	TensorFloat de_dp_host = clayer.de_dp();
-	for(unsigned i = 0; i < de_dp_host.num_elements(); ++i){
-		ASSERT_NEAR(de_dp_host[i], 0.f, std::numeric_limits<float>::epsilon());
+	TensorFloat de_db_host = clayer.de_db();
+	for(unsigned i = 0; i < de_db_host.num_elements(); ++i){
+		ASSERT_NEAR(de_db_host[i], 0.f, std::numeric_limits<float>::epsilon());
 	}
 }
 
@@ -240,17 +236,13 @@ TEST_F(CLayerTest, PropagateOnes)
 
 	TensorFloat out_cuda_host, ws_cuda_host;
 	out_cuda_host = clayer.out();
-	ws_cuda_host = clayer.weighted_sum();
-
 	cudacnn::TansigMod<float> transfer_func;
 
 	for (unsigned i = 0; i < out_cuda_host.num_elements(); i++) 
 	{
 		float true_bias = 1.f; // if more params => it must by an array
 		float true_ws = float(weightsHost.w()*weightsHost.h()*inputs.d());
-		float true_out = transfer_func(true_ws, &true_bias);
-		//EXPECT_EQ(outHost[i], true_out);		
-		ASSERT_EQ(ws_cuda_host[i], true_ws)<< "wsHost is wrong at index " << i;
+		float true_out = transfer_func(true_ws);
 		ASSERT_EQ(out_cuda_host[i], true_out)<< "outHost is wrong at index " << i;
 	}
 }
@@ -268,8 +260,8 @@ protected:
 		for (unsigned i = 0; i < weightsHost.num_elements(); i++) {
 			weightsHost[i] = float(std::rand()) / RAND_MAX;
 		}
-		for (unsigned i = 0; i < tf_paramsHost.num_elements(); i++) {
-			tf_paramsHost[i] = float(std::rand()) / RAND_MAX;
+		for (unsigned i = 0; i < biasesHost.num_elements(); i++) {
+			biasesHost[i] = float(std::rand()) / RAND_MAX;
 		}
 		for (unsigned i = 0; i < outputsHost.num_elements(); i++) {
 			outputsHost[i] = float(std::rand()) / RAND_MAX;
@@ -280,7 +272,7 @@ protected:
 
 		inputs = inputsHost;
 		weights = weightsHost;
-		tf_params = tf_paramsHost;
+		biases = biasesHost;
 		outputs = outputsHost;
 
 		conn_map = connHost;	
@@ -293,23 +285,18 @@ protected:
 
 TEST_F(CLayerRandomTest, PropagateRandom)
 {
-	cudacnn::CLayer<cudacnn::TensorGPU, float, cudacnn::Shrinkage<float> > clayer(inputs.w(), inputs.h(), true, weights, tf_params, conn_map);
-	cudacnn::CLayer<cudacnn::Tensor, float, cudacnn::Shrinkage<float> > clayer_host(inputs.w(), inputs.h(), true, weights, tf_params, conn_map);
+	cudacnn::CLayer<cudacnn::TensorGPU, float, cudacnn::TansigMod<float> > clayer(inputs.w(), inputs.h(), true, weights, biases, conn_map);
+	cudacnn::CLayer<cudacnn::Tensor, float, cudacnn::TansigMod<float> > clayer_host(inputs.w(), inputs.h(), true, weights, biases, conn_map);
 	
 	clayer.Propagate(inputs);
 	clayer_host.Propagate(inputsHost);
 
 	TensorFloat outHost = clayer.out();
-	TensorFloat wsHost = clayer.weighted_sum();
 	TensorFloat true_out = clayer_host.out();
-	TensorFloat true_ws = clayer_host.weighted_sum();	
 
 	for (unsigned i = 0; i < outHost.num_elements(); i++) 
 	{
-		//EXPECT_EQ(outHost[i], true_out);
-		//ASSERT_FLOAT_EQ(outHost[i], true_out[i])<< "outHost is wrong at index " << i;
 		ASSERT_NEAR(outHost[i], true_out[i], 1000.*FLT_EPSILON)<< "outHost is wrong at index " << i;
-		ASSERT_NEAR(wsHost[i], true_ws[i], 1000.*FLT_EPSILON)<< "wsHost is wrong at index " << i;
 	}
 }
 
@@ -318,8 +305,8 @@ TEST_F(CLayerRandomTest, BackPropRandom)
     TensorGPUFloat de_dx_prev(inputs);
 	TensorFloat de_dx_prev_host(inputsHost);
 
-	cudacnn::CLayer<cudacnn::TensorGPU, float, cudacnn::Shrinkage<float> > clayer(inputs.w(), inputs.h(), true, weights, tf_params, conn_map);
-	cudacnn::CLayer<cudacnn::Tensor, float, cudacnn::Shrinkage<float> > clayer_host(inputs.w(), inputs.h(), true, weights, tf_params, conn_map);
+	cudacnn::CLayer<cudacnn::TensorGPU, float, cudacnn ::TansigMod<float> > clayer(inputs.w(), inputs.h(), true, weights, biases, conn_map);
+	cudacnn::CLayer<cudacnn::Tensor, float, cudacnn::TansigMod<float> > clayer_host(inputs.w(), inputs.h(), true, weights, biases, conn_map);
 
 	clayer.PrepareForTraining();
 	clayer_host.PrepareForTraining();
@@ -343,18 +330,18 @@ TEST_F(CLayerRandomTest, BackPropRandom)
 		ASSERT_NEAR(de_dw_host[i], de_dw[i], 1000.*std::numeric_limits<float>::epsilon());
 	}
 
-	TensorFloat de_dp_host = clayer_host.de_dp();
-	TensorFloat de_dp = clayer.de_dp();
-	for(unsigned i = 0; i < de_dp_host.num_elements(); ++i)
+	TensorFloat de_db_host = clayer_host.de_db();
+	TensorFloat de_db = clayer.de_db();
+	for(unsigned i = 0; i < de_db_host.num_elements(); ++i)
 	{
-		ASSERT_NEAR(de_dp_host[i], de_dp[i], 1000.*std::numeric_limits<float>::epsilon());
+		ASSERT_NEAR(de_db_host[i], de_db[i], 1000.*std::numeric_limits<float>::epsilon());
 	}
 }
 
 TEST_F(CLayerRandomTest, ComputeDerivRandom)
 {	
-	cudacnn::CLayer<cudacnn::TensorGPU, float, cudacnn::Shrinkage<float> > clayer(inputs.w(), inputs.h(), true, weights, tf_params, conn_map);
-	cudacnn::CLayer<cudacnn::Tensor, float, cudacnn::Shrinkage<float> > clayer_host(inputs.w(), inputs.h(), true, weights, tf_params, conn_map);
+	cudacnn::CLayer<cudacnn::TensorGPU, float, cudacnn::TansigMod<float> > clayer(inputs.w(), inputs.h(), true, weights, biases, conn_map);
+	cudacnn::CLayer<cudacnn::Tensor, float, cudacnn::TansigMod<float> > clayer_host(inputs.w(), inputs.h(), true, weights, biases, conn_map);
 
 	clayer.PrepareForTraining();
 	clayer_host.PrepareForTraining();
@@ -372,20 +359,21 @@ TEST_F(CLayerRandomTest, ComputeDerivRandom)
 		ASSERT_NEAR(de_dw_host[i], de_dw[i], 1000.*std::numeric_limits<float>::epsilon());
 	}
 
-	TensorFloat de_dp_host = clayer_host.de_dp();
-	TensorFloat de_dp = clayer.de_dp();
-	for(unsigned i = 0; i < de_dp_host.num_elements(); ++i)
+	TensorFloat de_db_host = clayer_host.de_db();
+	TensorFloat de_db = clayer.de_db();
+	for(unsigned i = 0; i < de_db_host.num_elements(); ++i)
 	{
-		ASSERT_NEAR(de_dp_host[i], de_dp[i], 1000.*std::numeric_limits<float>::epsilon());
+		ASSERT_NEAR(de_db_host[i], de_db[i], 1000.*std::numeric_limits<float>::epsilon());
 	}
 }
 
 
 class CLayerNumericTest : public CUDATest {
 protected:
-	TensorDouble inputs, weights, tf_params, outputs;
+	TensorDouble inputs, weights, biases, outputs;
 	TensorInt conn_map;
     TensorDouble e_host, dedx_prev;
+    MSEFunction<double> performance_function;
 	virtual void SetUp()
 	{
 		CUDATest::SetUp();
@@ -399,10 +387,10 @@ protected:
 		wdims.push_back(4);
 		weights = TensorDouble(wdims);
 
-		std::vector<UINT> tfdims;
-		tfdims.push_back(2); // shrinkage params num = 2
-		tfdims.push_back(4);
-		tf_params = TensorDouble(tfdims);  // shrinkage params num = 2
+		std::vector<UINT> bdims;
+		bdims.push_back(1); 
+		bdims.push_back(4);
+		biases = TensorDouble(bdims);  
 
 		std::vector<UINT> dims(2);
 		dims[0] = inputs.d();
@@ -419,8 +407,8 @@ protected:
 		for (unsigned i = 0; i < weights.num_elements(); i++) {
 			weights[i] = float(std::rand()) / RAND_MAX;
 		}
-		for (unsigned i = 0; i < tf_params.num_elements(); i++) {
-			tf_params[i] = float(std::rand()) / RAND_MAX;
+		for (unsigned i = 0; i < biases.num_elements(); i++) {
+			biases[i] = float(std::rand()) / RAND_MAX;
 		}
 		for (unsigned i = 0; i < outputs.num_elements(); i++) {
 			outputs[i] = float(std::rand()) / RAND_MAX;
@@ -445,7 +433,7 @@ TEST_F(CLayerNumericTest, ComputeDerivNumeric)
     //Number of random weights choise and test 
     const int test_iterations = 15;
 
-	cudacnn::CLayer<cudacnn::Tensor, double, cudacnn::Shrinkage<double> > clayer(inputs.w(), inputs.h(), true, weights, tf_params, conn_map);
+	cudacnn::CLayer<cudacnn::Tensor, double, cudacnn::TansigMod<double> > clayer(inputs.w(), inputs.h(), true, weights, biases, conn_map);
     
     clayer.PrepareForTraining();
     clayer.Propagate(inputs);
@@ -482,11 +470,11 @@ TEST_F(CLayerNumericTest, ComputeDerivNumeric)
     //=============== Transfer function parameters testing ============================
     for(int t = 0; t < test_iterations; ++t ) {
         //Pick up some random weight
-        int nparams = clayer.tf_params().num_elements();
+        int nparams = clayer.biases().num_elements();
         int param_idx = int((nparams - 1)*(float(rand())/RAND_MAX));
         //Gradient computed by class method
-        double grad_comp = clayer.de_dp()[param_idx];
-        TensorDouble* params_mutable = const_cast<TensorDouble*>(&clayer.tf_params());
+        double grad_comp = clayer.de_db()[param_idx];
+        TensorDouble* params_mutable = const_cast<TensorDouble*>(&clayer.biases());
         (*params_mutable)[param_idx] -= eps;
         clayer.Propagate(inputs);
         e_host = clayer.out() - outputs;
@@ -536,7 +524,7 @@ TEST_F(CLayerNumericTest, DISABLED_ComputeSecondDerivNumeric)
     //Alias
     TensorDouble& d2edx2_prev = dedx_prev;
 
-	cudacnn::CLayer<cudacnn::Tensor, double, cudacnn::Shrinkage<double> > clayer(inputs.w(), inputs.h(), true, weights, tf_params, conn_map);
+	cudacnn::CLayer<cudacnn::Tensor, double, cudacnn::TansigMod<double> > clayer(inputs.w(), inputs.h(), true, weights, biases, conn_map);
     
     clayer.PrepareForTraining();
     clayer.Propagate(inputs);
@@ -581,16 +569,16 @@ TEST_F(CLayerNumericTest, DISABLED_ComputeSecondDerivNumeric)
     //=============== Transfer function parameters testing ============================
     for(int t = 0; t < test_iterations; ++t ) {
         //Pick up some random weight
-        int nparams = clayer.tf_params().num_elements();
+        int nparams = clayer.biases().num_elements();
         int param_idx = int((nparams - 1)*(float(rand())/RAND_MAX));
         //Gradient computed by class method
-        double hess_comp = clayer.d2e_dp2()[param_idx];
+        double hess_comp = clayer.d2e_db2()[param_idx];
         //Compute central element of finite difference
         clayer.Propagate(inputs);
         e_host = clayer.out() - outputs;
         double loss_center = performance_function(e_host);
         //Compute left element of finite difference
-        TensorDouble* params_mutable = const_cast<TensorDouble*>(&clayer.tf_params());
+        TensorDouble* params_mutable = const_cast<TensorDouble*>(&clayer.biases());
         (*params_mutable)[param_idx] -= eps;
         clayer.Propagate(inputs);
         e_host = clayer.out() - outputs;

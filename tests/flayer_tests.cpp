@@ -3,7 +3,7 @@
 class FLayerTest : public CUDATest {
 protected:
 	TensorGPUFloat weights, biases, inputs, outputs;
-	TensorFloat inputsHost, weightsHost, tf_paramsHost, outputsHost;
+	TensorFloat inputsHost, weightsHost, biasesHost, outputsHost;
 	virtual void SetUp()
 	{
 		CUDATest::SetUp();
@@ -76,7 +76,7 @@ TEST_F(FLayerTest, BackPropZeros)
 	for(unsigned i = 0; i < de_dw_host.num_elements(); ++i){
 		ASSERT_NEAR(de_dw_host[i], 0.f, std::numeric_limits<float>::epsilon());
 	}
-	TensorFloat de_dp_host = flayer.de_dp();
+	TensorFloat de_dp_host = flayer.de_db();
 	for(unsigned i = 0; i < de_dp_host.num_elements(); ++i){
 		ASSERT_NEAR(de_dp_host[i], 0.f, std::numeric_limits<float>::epsilon());
 	}
@@ -94,7 +94,7 @@ TEST_F(FLayerTest, ComputeDerivZeros)
 		EXPECT_EQ(outputsHost[i], 0);
 	}
 	
-	FLayerCudaFTS flayer(weights, tf_params, true);    
+	FLayerCudaFTS flayer(weights, biases, true);    
 	flayer.PrepareForTraining();
 	flayer.set_de_dx(outputs);
 	flayer.ComputeGradient(inputs);    
@@ -103,7 +103,7 @@ TEST_F(FLayerTest, ComputeDerivZeros)
 	for(unsigned i = 0; i < de_dw_host.num_elements(); ++i){
 		ASSERT_NEAR(de_dw_host[i], 0.f, std::numeric_limits<float>::epsilon());
 	}
-	TensorFloat de_dp_host = flayer.de_dp();
+	TensorFloat de_dp_host = flayer.de_db();
 	for(unsigned i = 0; i < de_dp_host.num_elements(); ++i){
 		ASSERT_NEAR(de_dp_host[i], 0.f, std::numeric_limits<float>::epsilon());
 	}
@@ -125,12 +125,11 @@ TEST_F(FLayerTest, PropagateOnes)
 	weights = weightsHost;
 	biases = biasesHost;
 
-	FLayerCudaFTS flayer(weights, tf_params, true);
+	FLayerCudaFTS flayer(weights, biases, true);
 	flayer.Propagate(inputs);
 
 	TensorFloat out_cuda_host, ws_cuda_host;
 	out_cuda_host = flayer.out();
-	ws_cuda_host = flayer.weighted_sum();
 
 	TansigMod<float> transfer_func;
 	
@@ -138,9 +137,7 @@ TEST_F(FLayerTest, PropagateOnes)
 	{
 		float true_tf_p = 1.f; // if more params => it must by an array
 		float true_ws = float(inputs.num_elements());
-		float true_out = transfer_func(true_ws, &true_tf_p);
-		//EXPECT_EQ(outHost[i], true_out);
-		ASSERT_EQ(ws_cuda_host[i], true_ws)<< "wsHost is wrong at index " << i;
+		float true_out = transfer_func(true_ws);
 		ASSERT_EQ(out_cuda_host[i], true_out)<< "outHost is wrong at index " << i;
 	}
 }
@@ -178,23 +175,18 @@ protected:
 
 TEST_F(FLayerRandomTest, PropagateRandom)
 {
-	FLayerCudaFTS flayer(weights, tf_params, true);
-	FLayerFTS flayer_host(weights, tf_params, true);
+	FLayerCudaFTS flayer(weights, biases, true);
+	FLayerFTS flayer_host(weights, biases, true);
 	
 	flayer.Propagate(inputs);
 	flayer_host.Propagate(inputs);
 
 	TensorFloat outHost = flayer.out();
-	TensorFloat wsHost = flayer.weighted_sum();
 	TensorFloat true_out = flayer_host.out();
-	TensorFloat true_ws = flayer_host.weighted_sum();
 
 	for (unsigned i = 0; i < outHost.num_elements(); i++) 
 	{
-		//EXPECT_EQ(outHost[i], true_out);
-		//ASSERT_FLOAT_EQ(outHost[i], true_out[i])<< "outHost is wrong at index " << i;
 		ASSERT_NEAR(outHost[i], true_out[i], 100.*FLT_EPSILON)<< "outHost is wrong at index " << i;
-		ASSERT_NEAR(wsHost[i], true_ws[i], 100.*FLT_EPSILON)<< "wsHost is wrong at index " << i;
 	}
 }
 
@@ -203,8 +195,8 @@ TEST_F(FLayerRandomTest, BackPropRandom)
     TensorGPUFloat de_dx_prev(inputs);
 	TensorFloat de_dx_prev_host(inputsHost);
 
-	FLayerCudaFTS flayer(weights, tf_params, true);
-	FLayerFTS flayer_host(weights, tf_params, true);
+	FLayerCudaFTS flayer(weights, biases, true);
+	FLayerFTS flayer_host(weights, biases, true);
 
 	flayer.PrepareForTraining();
 	flayer_host.PrepareForTraining();
@@ -228,18 +220,18 @@ TEST_F(FLayerRandomTest, BackPropRandom)
 		ASSERT_NEAR(de_dw_host[i], de_dw[i], 100.*std::numeric_limits<float>::epsilon());
 	}
 
-	TensorFloat de_dp_host = flayer_host.de_dp();
-	TensorFloat de_dp = flayer.de_dp();
+	TensorFloat de_dp_host = flayer_host.de_db();
+	TensorFloat de_db = flayer.de_db();
 	for(unsigned i = 0; i < de_dp_host.num_elements(); ++i)
 	{
-		ASSERT_NEAR(de_dp_host[i], de_dp[i], 100.*std::numeric_limits<float>::epsilon());
+		ASSERT_NEAR(de_dp_host[i], de_db[i], 100.*std::numeric_limits<float>::epsilon());
 	}
 }
 
 TEST_F(FLayerRandomTest, ComputeDerivRandom)
 {	
-	FLayerCudaFTS flayer(weights, tf_params, true);
-	FLayerFTS flayer_host(weights, tf_params, true);
+	FLayerCudaFTS flayer(weights, biases, true);
+	FLayerFTS flayer_host(weights, biases, true);
 
 	flayer.PrepareForTraining();
 	flayer_host.PrepareForTraining();
@@ -257,18 +249,18 @@ TEST_F(FLayerRandomTest, ComputeDerivRandom)
 		ASSERT_NEAR(de_dw_host[i], de_dw[i], 100.*std::numeric_limits<float>::epsilon());
 	}
 
-	TensorFloat de_dp_host = flayer_host.de_dp();
-	TensorFloat de_dp = flayer.de_dp();
+	TensorFloat de_dp_host = flayer_host.de_db();
+	TensorFloat de_db = flayer.de_db();
 	for(unsigned i = 0; i < de_dp_host.num_elements(); ++i)
 	{
-		ASSERT_NEAR(de_dp_host[i], de_dp[i], 100.*std::numeric_limits<float>::epsilon());
+		ASSERT_NEAR(de_dp_host[i], de_db[i], 100.*std::numeric_limits<float>::epsilon());
 	}
 }
 
 
 class FLayerNumericTest : public CUDATest {
 protected:
-	TensorDouble inputs, weights, tf_params, outputs;
+	TensorDouble inputs, weights, biases, outputs;
     TensorDouble e_host, dedx_prev;
 	virtual void SetUp()
 	{
@@ -286,14 +278,14 @@ protected:
 		std::vector<UINT> tfdims;
 		tfdims.push_back(1); // tansigmod num = 1 
 		tfdims.push_back(84);
-		tf_params = TensorDouble(tfdims);  // tansigmod num = 1
+		biases = TensorDouble(tfdims);  // tansigmod num = 1
 
 
 		for (unsigned i = 0; i < inputs.num_elements(); i++) {
 			inputs[i] = float(std::rand()) / RAND_MAX;
 		}
-		for (unsigned i = 0; i < tf_params.num_elements(); i++) {
-			tf_params[i] = float(std::rand()) / RAND_MAX;
+		for (unsigned i = 0; i < biases.num_elements(); i++) {
+			biases[i] = float(std::rand()) / RAND_MAX;
 		}
 		for (unsigned i = 0; i < outputs.num_elements(); i++) {
 			outputs[i] = float(std::rand()) / RAND_MAX;
@@ -314,7 +306,7 @@ TEST_F(FLayerNumericTest, ComputeDerivNumeric)
     //Number of random weights choise and test 
     const int test_iterations = 5;
 
-	FLayerDTS flayer(weights, tf_params, true);
+	FLayerDTS flayer(weights, biases, true);
     flayer.InitWeights(&RandomWeightInit);
     flayer.PrepareForTraining();
     flayer.Propagate(inputs);
@@ -350,11 +342,11 @@ TEST_F(FLayerNumericTest, ComputeDerivNumeric)
     //=============== Transfer function parameters testing ============================
     for(int t = 0; t < test_iterations; ++t ) {
         //Pick up some random weight
-        int nparams = flayer.tf_params().num_elements();
+        int nparams = flayer.biases().num_elements();
         int param_idx = int((nparams - 1)*(float(rand())/RAND_MAX));
         //Gradient computed by class method
-        double grad_comp = flayer.de_dp()[param_idx];
-        TensorDouble* params_mutable = const_cast<TensorDouble*>(&flayer.tf_params());
+        double grad_comp = flayer.de_db()[param_idx];
+        TensorDouble* params_mutable = const_cast<TensorDouble*>(&flayer.biases());
         (*params_mutable)[param_idx] -= eps;
         flayer.Propagate(inputs);
         e_host = flayer.out() - outputs;
@@ -405,7 +397,7 @@ TEST_F(FLayerNumericTest, DISABLED_ComputeSecondDerivNumeric)
     //Alias
     TensorDouble& d2edx2_prev = dedx_prev;
 
-	FLayerDTS flayer(weights, tf_params, true);
+	FLayerDTS flayer(weights, biases, true);
     flayer.InitWeights(&RandomWeightInit);
     flayer.PrepareForTraining();
     flayer.Propagate(inputs);
@@ -449,16 +441,16 @@ TEST_F(FLayerNumericTest, DISABLED_ComputeSecondDerivNumeric)
     ////=============== Transfer function parameters testing ============================
     for(int t = 0; t < test_iterations; ++t ) {
         //Pick up some random weight
-        int nparams = flayer.tf_params().num_elements();
+        int nparams = flayer.biases().num_elements();
         int param_idx = int((nparams - 1)*(float(rand())/RAND_MAX));
         //Gradient computed by class method
-        double hess_comp = flayer.d2e_dp2()[param_idx];
+        double hess_comp = flayer.d2e_db2()[param_idx];
         //Compute central element of finite difference
         flayer.Propagate(inputs);
         e_host = flayer.out() - outputs;
         double loss_center = performance_function(e_host);
         //Compute left element of finite difference
-        TensorDouble* params_mutable = const_cast<TensorDouble*>(&flayer.tf_params());
+        TensorDouble* params_mutable = const_cast<TensorDouble*>(&flayer.biases());
         (*params_mutable)[param_idx] -= eps;
         flayer.Propagate(inputs);
         e_host = flayer.out() - outputs;

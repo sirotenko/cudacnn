@@ -2,11 +2,10 @@
 #include "precomp.h"
 
 #ifdef HAVE_HDF5
-//FIXME test_mnist_net.h5 does not support tf_params
 TEST(CNNetTest, ReadFromHDF)
 {
 	CNNetCudaF cnnet;
-	cnnet.LoadFromFile("H5_TEST_H5_v2.h5");
+	ASSERT_NO_THROW(cnnet.LoadFromFile("test_mnist_net.h5"));
 }
 #endif //HAVE_HDF5
 
