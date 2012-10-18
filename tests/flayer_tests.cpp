@@ -135,7 +135,6 @@ TEST_F(FLayerTest, PropagateOnes)
 	
 	for (unsigned i = 0; i < out_cuda_host.num_elements(); i++) 
 	{
-		float true_tf_p = 1.f; // if more params => it must by an array
 		float true_ws = float(inputs.num_elements());
 		float true_out = transfer_func(true_ws);
 		ASSERT_EQ(out_cuda_host[i], true_out)<< "outHost is wrong at index " << i;

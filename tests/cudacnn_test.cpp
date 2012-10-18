@@ -9,15 +9,14 @@ TEST(CNNetTest, ReadFromHDF)
 }
 #endif //HAVE_HDF5
 
-int main(int argc, char **argv) 
-{
-	std::srand(static_cast<unsigned int>(time(0)));
+int main(int argc, char **argv) {
+    std::srand(static_cast<unsigned int> (time(0)));
 
-  	::testing::InitGoogleTest(&argc, argv);
-	RUN_ALL_TESTS();
+    ::testing::InitGoogleTest(&argc, argv);
+    int ret = RUN_ALL_TESTS();
     std::cin.get();
-	
+
     //_CrtDumpMemoryLeaks();
-	return 0;
-	
+    return ret;
+
 }

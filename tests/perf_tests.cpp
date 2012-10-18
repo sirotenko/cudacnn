@@ -69,11 +69,11 @@ protected:
 
 	virtual void SetUp()
 	{
-        const int inp_width = 32;
-        const int inp_height = 32;
-        const bool is_trainable = false;
+        //const int inp_width = 32;
+        //const int inp_height = 32;
+        //const bool is_trainable = false;
 
-		CUDATest::SetUp();
+	CUDATest::SetUp();
         inputs = TensorGPUFloat(32, 32, 3);		
         inputsHost = inputs;		
         convnet = new CNNet<TensorGPU, float>();

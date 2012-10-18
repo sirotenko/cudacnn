@@ -240,7 +240,6 @@ TEST_F(CLayerTest, PropagateOnes)
 
 	for (unsigned i = 0; i < out_cuda_host.num_elements(); i++) 
 	{
-		float true_bias = 1.f; // if more params => it must by an array
 		float true_ws = float(weightsHost.w()*weightsHost.h()*inputs.d());
 		float true_out = transfer_func(true_ws);
 		ASSERT_EQ(out_cuda_host[i], true_out)<< "outHost is wrong at index " << i;

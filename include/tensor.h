@@ -243,7 +243,7 @@ Tensor<T> Tensor<T>::Rand(const std::vector<unsigned>& dims_in, T sigma )
 {
 	Tensor<T> tens(dims_in);
 	for (UINT i = 0; i < tens.num_elements(); ++i)	{
-		tens[i] = static_cast<T>(-0.5 + (double(std::rand()) / RAND_MAX))*sigma;
+		tens[i] = static_cast<T>(-0.5 + (double(rand()) / RAND_MAX))*sigma;
 	}
 	return tens;
 }

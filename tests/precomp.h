@@ -32,6 +32,13 @@
 #include <time.h>
 #include <memory>
 #include <list>
+#include <float.h>
+
+#ifdef HAVE_CUDA
+#include <cuda.h>
+#include "cuda_runtime_api.h"
+
+#endif
 
 #include "gtest/gtest.h"
 #include "common.h"

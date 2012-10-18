@@ -127,7 +127,7 @@ TEST_F(CNNTrainTest, DISABLED_TestHessianAveraging)
 	}
 	cnnet_gpu.AverageHessian();
 
-	for(int i = 0; i < cnnet_gpu.nlayers(); ++i ) {
+	for(unsigned i = 0; i < cnnet_gpu.nlayers(); ++i ) {
 		//Should be equal between each other
 		std::stringstream ss;
 		ss<<"d2e_dw2 check failed."<<std::endl<<"Layer N "<<i<<std::endl;
