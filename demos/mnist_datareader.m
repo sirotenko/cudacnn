@@ -25,7 +25,7 @@ if ~isempty(varargin)
     end
     %New buffer position can be either bigger than buffer size or less than
     %0
-    if(isfield(datareader, 'buffer_position '))
+    if(isfield(datareader, 'buffer_position'))
         datareader.buffer_position = idx - datareader.current + datareader.buffer_position;
         datareader.current = idx;       
     end
