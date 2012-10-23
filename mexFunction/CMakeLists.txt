@@ -15,6 +15,9 @@ if(NOT HAVE_BOOST)
 	    #Enable C++11
 	    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 	endif() 
+	if(CMAKE_GENERATOR STREQUAL Xcode)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libc++")
+	endif()
 endif()
 
 
