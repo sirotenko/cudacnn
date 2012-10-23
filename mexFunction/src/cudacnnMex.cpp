@@ -64,8 +64,8 @@ Trainer<MAT, T>* InitTrainer(CNNet<MAT, T>* cnn, const mxArray * trainer_arr )
 		throw std::runtime_error(ss.str());
 	}
 	
-	const char* train_method = GetSVal(trainer_arr, "TrainMethod");
-	if(strcmp(train_method,"StochasticLM")==0) { //Stochastic Levenberg Marquardt
+	std::string train_method = GetSVal(trainer_arr, "TrainMethod");
+	if(train_method.compare("StochasticLM")==0) { //Stochastic Levenberg Marquardt
 		StochasticLMTrainer<MAT, T>* trainer = new StochasticLMTrainer<MAT,T>(cnn);
 		trainer->settings.epochs = GetScalar<UINT>(trainer_arr,"epochs");
 		trainer->settings.mu = GetScalar<T>(trainer_arr,"mu");
@@ -98,8 +98,7 @@ void CudaInfoMatlab()
 {	
 	int            deviceCount;
 	cudaDeviceProp devProp;
-        //cudaError_t err = 
-        cudaGetDeviceCount ( &deviceCount );
+    cutilSafeCall(cudaGetDeviceCount ( &deviceCount ));
 
 	if(!deviceCount) mexErrMsgTxt("Error: No CUDA devices found!");
 

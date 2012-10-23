@@ -203,25 +203,25 @@ void SetScalar(T data, const char* name, mxArray* inp)
 	mxClassID id = mxGetClassID(scal);
 	switch(id){
 		case mxDOUBLE_CLASS:
-			*pdata = static_cast<double>(data); break;
+			*static_cast<double*>(pdata) = static_cast<double>(data); break;
 		case mxSINGLE_CLASS:
-			*pdata = static_cast<float>(data); break;
+			*static_cast<float*>(pdata) = static_cast<float>(data); break;
 		case mxINT8_CLASS:
-			*pdata = static_cast<char>(data); break;
+			*static_cast<char*>(pdata) = static_cast<char>(data); break;
 		case mxUINT8_CLASS:
-			*pdata = static_cast<unsigned char>(data); break;
+			*static_cast<unsigned char*>(pdata) = static_cast<unsigned char>(data); break;
 		case mxINT16_CLASS:
-			*pdata = static_cast<short>(data); break;
+			*static_cast<short*>(pdata) = static_cast<short>(data); break;
 		case mxUINT16_CLASS:
-			*pdata = static_cast<unsigned short>(data); break;
+			*static_cast<unsigned short*>(pdata) = static_cast<unsigned short>(data); break;
 		case mxINT32_CLASS:
-			*pdata = static_cast<int>(data); break;
+			*static_cast<int*>(pdata) = static_cast<int>(data); break;
 		case mxUINT32_CLASS:
-			*pdata = static_cast<UINT>(data); break;
+			*static_cast<UINT*>(pdata) = static_cast<UINT>(data); break;
 		case mxINT64_CLASS:
-			*pdata = static_cast<long long>(data); break;
+			*static_cast<long long*>(pdata) = static_cast<long long>(data); break;
 		case mxUINT64_CLASS:
-			*pdata = static_cast<unsigned long>(data); break;
+			*static_cast<unsigned long*>(pdata) = static_cast<unsigned long>(data); break;
 		default:
 			std::stringstream ss;
 			ss<<"Failed to load "<<name<<". Unknown or unsupported scalar data type.";
