@@ -80,11 +80,11 @@
 
 #ifdef HAVE_HDF5
 //TODO: Find out why it's different and fix if possible
-#ifdef _WIN32
+//#ifdef _WIN32
 #include "cpp/H5Cpp.h"
-#else
-#include "H5Cpp.h"
-#endif  //_WIN32
+//#else
+//#include "H5Cpp.h"
+//#endif  //_WIN32
 
 #include "hdf5_helper.h"
 

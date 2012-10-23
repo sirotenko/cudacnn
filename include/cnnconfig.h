@@ -1,6 +1,6 @@
 #ifndef _CNNCONFIG_H_
 #define _CNNCONFIG_H_
-/* #undef CUDACNN_BUILD_SHARED_LIB */
+#define  CUDACNN_BUILD_SHARED_LIB
 
 /* Name of package */
 #define  PACKAGE "cudacnn"
@@ -15,7 +15,7 @@
 #define  CUDACNN_VERSION "1.0.0"
 
 /* Boost C++ library*/
-/* #undef HAVE_BOOST */
+#define HAVE_BOOST
 
 /* NVidia Cuda Runtime API*/
 #define HAVE_CUDA

@@ -144,6 +144,8 @@ for t=1:trainer.epochs
 
 end
 cnet = cudacnnMex(cnet, 'save');
+%Convert struct to object
+evalc('cnet = cnn(cnet,false);'); %Suppress "CNN successfully initialized." message        
 toc
 
 %calcMCR Calculate missclassification rate
