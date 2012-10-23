@@ -1,4 +1,6 @@
-# Version slightly corrected to find latest Matlab versions. Mikhail Sirotenko (2012)
+# Version slightly corrected to find latest Matlab versions. 
+# Special thanks for Tom Lampert for fixes to make it work on OSX
+# Mikhail Sirotenko (2012)
 # - this module looks for Matlab
 # Defines:
 #  MATLAB_INCLUDE_DIR: include path for mex.h, engine.h
@@ -88,7 +90,7 @@ IF(NOT MATLAB_ROOT)
 		)
 
 	ELSE( WIN32 )
-		SET(_MATLAB_ROOT_LST  
+	       SET(_MATLAB_ROOT_LST
 		  $ENV{MATLABDIR}
 		  $ENV{MATLAB_DIR}
 		  /usr/local/matlab-7sp1/
@@ -106,21 +108,46 @@ IF(NOT MATLAB_ROOT)
 		  /usr/local/MATLAB/R2009b/
 		  /usr/local/MATLAB/R2009a/
 		  /usr/local/MATLAB/R2008b/
-		  /usr/local/MATLAB/R2008a/  
-		  )	
+		  /usr/local/MATLAB/R2008a/
+		  /Applications/MATLAB_R2012b.app/
+		  /Applications/MATLAB_R2012a.app/
+		  /Applications/MATLAB_R2011b.app/
+		  /Applications/MATLAB_R2011a.app/
+		  /Applications/MATLAB_R2010bSP1.app/
+		  /Applications/MATLAB_R2010b.app/
+		  /Applications/MATLAB_R2010a.app/
+		  /Applications/MATLAB_R2009bSP1.app/
+		  /Applications/MATLAB_R2009b.app/
+		  /Applications/MATLAB_R2009a.app/
+		  /Applications/MATLAB_R2008b.app/
+		  /Applications/MATLAB_R2008a.app/
+		  )
 		#SET (LOOP_VAR "")
-		#SET(_MATLAB_ROOT "bin-NOTFOUND")
+		SET(_MATLAB_ROOT "bin-NOTFOUND")
 		FOREACH(LOOP_VAR ${_MATLAB_ROOT_LST})
 			FIND_PATH(_MATLAB_ROOT "bin" ${LOOP_VAR} NO_DEFAULT_PATH)
-			IF(_MATLAB_ROOT)				
+			IF(_MATLAB_ROOT)			
 				SET(MATLAB_ROOT ${_MATLAB_ROOT})
 				BREAK()
 			ENDIF()
 		ENDFOREACH()
-		
+
+
 	  IF(64BIT)
-		# AMD64:
-		SET(MATLAB_LIB_DIR "${MATLAB_ROOT}/bin/glnxa64/")
+	       SET(_MATLAB_LIB_DIR "bin-NOTFOUND")
+
+		# AMD64 (Linux):
+		FIND_PATH(_MATLAB_LIB_DIR "glnxa64" ${MATLAB_ROOT}/bin/ NO_DEFAULT_PATH)
+		IF(_MATLAB_LIB_DIR)			
+			SET(MATLAB_LIB_DIR ${_MATLAB_LIB_DIR}/glnxa64)
+		ENDIF()
+	
+	   # Intel64 (OSX):
+		FIND_PATH(_MATLAB_LIB_DIR "maci64" ${MATLAB_ROOT}/bin/ NO_DEFAULT_PATH)
+		IF(_MATLAB_LIB_DIR)
+			SET(MATLAB_LIB_DIR ${_MATLAB_LIB_DIR}/maci64)
+		ENDIF()
+
 		EXECUTE_PROCESS(COMMAND "${MATLAB_ROOT}/bin/mexext" OUTPUT_VARIABLE MATLAB_MEXFILE_EXT OUTPUT_STRIP_TRAILING_WHITESPACE)		
 	  ELSE(64BIT)
 		# Regular x86
