@@ -77,7 +77,7 @@ Trainer<MAT, T>* InitTrainer(CNNet<MAT, T>* cnn, const mxArray * trainer_arr )
 		trainer->settings.theta = std::vector<T>(theta_tmp.data(),theta_tmp.data()+theta_tmp.num_elements()*sizeof(T));
 		return trainer;
 	}
-	else if(strcmp(train_method,"StochasticGD")==0){ //Stochastic Gradient descent
+	else if(train_method.compare("StochasticGD")==0){ //Stochastic Gradient descent
 		StochasticGDTrainer<MAT, T>* trainer = new StochasticGDTrainer<MAT,T>(cnn);
 		trainer->settings.epochs = GetScalar<UINT>(trainer_arr,"epochs");
 		Tensor<T> theta_tmp = GetArray<T>(trainer_arr,"theta");
