@@ -388,6 +388,14 @@ public:
 
 		this->out_ = MainTensorType(params.inp_width / params.sx, params.inp_height / params.sy, params.ninputs);
 	}
+	PoolingLayerT(const typename Layer<TT,T>::ILoadSaveObject& save_load_obj) {
+		Load(save_load_obj, false);
+		std::vector<UINT> wdims(1);
+		wdims[0] = 0;
+		this->weights_ = MainTensorType(wdims);
+		this->biases_ = MainTensorType(wdims);
+		this->out_ = MainTensorType(params.inp_width / params.sx, params.inp_height / params.sy, params.ninputs);
+	}
 	UINT sx() const { return sx_; }
 	UINT sy() const { return sy_; }
     PoolingType pooling_type() const { return pooling_type_; }

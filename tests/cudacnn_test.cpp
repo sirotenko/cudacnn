@@ -7,6 +7,14 @@ TEST(CNNetTest, ReadFromHDF)
 	CNNetCudaF cnnet;
 	ASSERT_NO_THROW(cnnet.LoadFromFile("test_mnist_net.h5"));
 }
+#else //HAVE_HDF5
+TEST(CNNetTest, ReadFromFile)
+{
+	CNNetCudaF cnnet;
+	ASSERT_NO_THROW(cnnet.LoadFromFile("test_mnist_net.bin"));
+}
+
+
 #endif //HAVE_HDF5
 
 int main(int argc, char **argv) {
