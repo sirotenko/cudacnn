@@ -46,10 +46,13 @@ namespace cudacnn {
         //=========================== Network utility methods
         //If hdf5 library unavailable file read and save operations will not work
         //This can be the case if Matlab is used for saving and loading nnet
-//#ifdef HAVE_HDF5
+#ifdef HAVE_HDF5
         int LoadFromFile(const std::string& filename);
         int SaveToFile(const std::string& filename);
-//#endif
+#endif
+		int LoadFromFileSimple(const std::string& filename);
+		int SaveToFileSimple(const std::string& filename);
+
         //=========================== Simulation
         //Perform propagation of inputs from the input layer to the output layer
         //Network must be initialized and inputs loaded
@@ -343,7 +346,7 @@ namespace cudacnn {
         return -1;
     }
 
-#else //HAVE_HDF5
+#endif //HAVE_HDF5
 
 //If no HDF5 support, use very simple binary format for reading and writing 
 //networks
@@ -362,22 +365,22 @@ public:
 	virtual void AddString(const std::string str, const std::string name) { 
 		file_.write(name.c_str(), name.size());
 		size_t str_sz = str.size();
-		file_.write(&str_sz, sizeof(str_sz));
+		file_.write((char*)&str_sz, sizeof(str_sz));
 		file_.write(str.c_str(), str.size());
 	}
 	//Loading interface
-	virtual void GetScalar(T& scal, const std::string name) { GetScalarT<T>(scal, name);	} 
-	virtual void GetScalar(int& scal, const std::string name) { GetScalarT<int>(scal, name);	} 
-	virtual void GetScalar(UINT& scal, const std::string name) { GetScalarT<UINT>(scal, name);	} 
-	virtual void GetScalar(double& scal, const std::string name) { GetScalarT<double>(scal, name);	} 
-	virtual void GetArray(MAT<T>& arr, const std::string name) { GetArrayT<T>(arr, name); }
-	virtual void GetArray(MAT<int>& arr, const std::string name) { GetArrayT<int>(arr, name); }
-	virtual void GetString(std::string& str, const std::string name) { 
+	virtual void GetScalar(T& scal, const std::string name) const { GetScalarT<T>(scal, name);	} 
+	virtual void GetScalar(int& scal, const std::string name) const { GetScalarT<int>(scal, name);	} 
+	virtual void GetScalar(UINT& scal, const std::string name) const { GetScalarT<UINT>(scal, name);	} 
+	virtual void GetScalar(double& scal, const std::string name) const { GetScalarT<double>(scal, name);	} 
+	virtual void GetArray(MAT<T>& arr, const std::string name) const { GetArrayT<T>(arr, name); }
+	virtual void GetArray(MAT<int>& arr, const std::string name) const { GetArrayT<int>(arr, name); }
+	virtual void GetString(std::string& str, const std::string name) const { 
 		char* name_in = new char[name.size()]; //Ignored
 		file_.read(name_in, name.size());
 		delete[] name_in;
 		size_t str_sz;
-		file_.read(&str_sz, sizeof(str_sz));
+		file_.read((char*)&str_sz, sizeof(str_sz));
 		char* str_out = new char[str_sz];
 		file_.read(str_out, str_sz);
 		str = str_out;
@@ -387,20 +390,20 @@ private:
 	template<class TIn>
 	void AddScalarT(TIn scal, const std::string name){
 		file_.write(name.c_str(), name.size());
-		file_.write(&scal, sizeof(TIn));
+		file_.write((char*)&scal, sizeof(TIn));
 	}
 	template<class TIn>
 	void AddArrayT(const MAT<TIn>& arr, const std::string name){
 		file_.write(name.c_str(), name.size());
-		unsigned ndims = arr.num_dims();
-		file_.write(&ndims, sizeof(ndims));
-		file_.write(&arr.dims()[0], ndims*sizeof(unsigned));
+		unsigned ndims = (int)arr.num_dims();
+		file_.write((char*)&ndims, sizeof(ndims));
+		file_.write((char*)&arr.dims()[0], ndims*sizeof(unsigned));
 		unsigned nelems = arr.num_elements();
-		file_.write(&nelems, sizeof(nelems));
-		file_.write(arr.data(), arr.num_elements()*sizeof(TIn));
+		file_.write((char*)&nelems, sizeof(nelems));
+		file_.write((char*)arr.data(), arr.num_elements()*sizeof(TIn));
 	}
 	template<class TIn>
-	void GetScalarT(TIn& scal, const std::string name){
+	void GetScalarT(TIn& scal, const std::string name)  const {
 		char* name_in = new char[name.size()]; 
 		file_.read(name_in, name.size());
 		if(!name.compare(name_in)) {
@@ -411,11 +414,11 @@ private:
 			ss<<std::endl;
 			throw std::runtime_error(ss.str());
 		}
-		file_.read(&scal, sizeof(TIn));
+		file_.read((char*)&scal, sizeof(TIn));
 		delete[] name_in;
 	}
 	template<class TIn>
-	void GetArrayT(MAT<TIn>& arr, const std::string name){
+	void GetArrayT(MAT<TIn>& arr, const std::string name) const {
 		char* name_in = new char[name.size()]; 
 		file_.read(name_in, name.size());
 		if(!name.compare(name_in)) {
@@ -429,13 +432,13 @@ private:
 
 		delete[] name_in;
 		unsigned ndims;
-		file_.read(&ndims, sizeof(ndims));
+		file_.read((char*)&ndims, sizeof(ndims));
 		std::vector<unsigned> dims(ndims);
-		file_.read(&dims[0], ndims*sizeof(unsigned));
+		file_.read((char*)&dims[0], ndims*sizeof(unsigned));
 		unsigned nelems = arr.num_elements();
-		file_.read(&nelems, sizeof(nelems));
+		file_.read((char*)&nelems, sizeof(nelems));
 		arr = MAT<TIn>(dims);
-		file_.read(arr.data(), arr.num_elements()*sizeof(TIn));
+		file_.read((char*)arr.data(), arr.num_elements()*sizeof(TIn));
 	}
 
 	std::fstream& file_;
@@ -443,8 +446,9 @@ private:
 
 
 template< template<class> class T, class ET>
-int CNNet<T, ET>::LoadFromFile(const std::string& filename) {
-	std::fstream file(filename, fstream::in | fstream::out);
+int CNNet<T, ET>::LoadFromFileSimple(const std::string& filename) {
+	std::fstream file(filename.c_str(), std::fstream::in | std::fstream::out); 
+	
 	if(! file.is_open()){
 		std::stringstream ss;
 		ss<<"Failed to open: ";
@@ -453,13 +457,14 @@ int CNNet<T, ET>::LoadFromFile(const std::string& filename) {
 		throw std::runtime_error(ss.str());
 	}
 	SimpleLoadSaveObj<T, ET> lso(file);	
-	double ver;
+	int ver;
 	lso.GetScalar(ver, "Version");
 	if (ver != __CNN_FILE_VERSION)
 		throw std::runtime_error("Unsupported version of CNN file");
 
-	size_t nlayers_; lso.GetScalar(nlayers_, "nlayers");
-	lso.GetScalar(ninputs_, "nInputs");
+	UINT nlayers_; lso.GetScalar(nlayers_, "nlayers");
+	int ninputs_int; lso.GetScalar(ninputs_int, "nInputs");
+	ninputs_ = (BYTE) ninputs_int;
 	lso.GetScalar(input_width_, "inputWidth");
 	lso.GetScalar(input_height_, "inputHeight");
 
@@ -475,62 +480,44 @@ int CNNet<T, ET>::LoadFromFile(const std::string& filename) {
 				layers_.push_back(LayerPtr(new PoolingLayer<T, ET > (lso)));
 				break;
 			}
-		//case Layer<T, ET>::eCLayer:
-		//	{
-		//		bool is_trainable = hdf5Helper::ReadIntAttribute(layerGroup, "Trainable") == 1 ? true : false;
-		//		int inp_width = hdf5Helper::ReadIntAttribute(layerGroup, "InpWidth");
-		//		int inp_height = hdf5Helper::ReadIntAttribute(layerGroup, "InpHeight");
-		//		eTransfFunc tf = (eTransfFunc) hdf5Helper::ReadIntAttribute(layerGroup, "TransferFunc");
-		//		Tensor<ET> weights, biases;
-		//		TensorInt conn_map;
-		//		hdf5Helper::ReadArray<ET > (layerGroup, "Weights", weights);
-		//		hdf5Helper::ReadArray<ET > (layerGroup, "Biases", biases);
-		//		hdf5Helper::ReadArray<int>(layerGroup, "ConnMap", conn_map);
-		//		switch (tf) {
-		//		case eTansig_mod:
-		//			layers_.push_back(LayerPtr(new CLayer<T, ET, 
-		//				TansigMod<ET> >(inp_width, inp_height, is_trainable,
-		//				weights, biases, conn_map)));
-		//			break;
-		//		case eTansig:
-		//			layers_.push_back(LayerPtr(new CLayer<T, ET, 
-		//				Tansig<ET> >(inp_width, inp_height, is_trainable,
-		//				weights, biases, conn_map)));
-		//			break;
-		//		case ePurelin:
-		//			layers_.push_back(LayerPtr(new CLayer<T, ET, 
-		//				Purelin<ET> >(inp_width, inp_height, is_trainable,
-		//				weights, biases, conn_map)));
-		//			break;
-		//		default:
-		//			throw std::runtime_error("Unknown transfer function");
-		//		}
-		//		break;
-		//	}
-		//case Layer<T, ET>::eFLayer:
-		//	{
-		//		bool is_trainable = hdf5Helper::ReadIntAttribute(layerGroup, "Trainable") == 1 ? true : false;
-		//		eTransfFunc tf = (eTransfFunc) hdf5Helper::ReadIntAttribute(layerGroup, "TransferFunc");
-		//		Tensor<ET> weights, biases;
-
-		//		hdf5Helper::ReadArray<ET > (layerGroup, "Weights", weights);
-		//		hdf5Helper::ReadArray<ET > (layerGroup, "Biases", biases);
-		//		switch (tf) {
-		//		case eTansig_mod:
-		//			layers_.push_back(LayerPtr(new FLayer<T, ET, TansigMod<ET> >(weights, biases, is_trainable)));
-		//			break;
-		//		case eTansig:
-		//			layers_.push_back(LayerPtr(new FLayer<T, ET, Tansig<ET> >(weights, biases, is_trainable)));
-		//			break;
-		//		case ePurelin:
-		//			layers_.push_back(LayerPtr(new FLayer<T, ET, Purelin<ET> >(weights, biases, is_trainable)));
-		//			break;
-		//		default:
-		//			throw std::runtime_error("Unknown transfer function");
-		//		}
-		//		break;
-		//	}
+		case Layer<T, ET>::eCLayer:
+			{
+				int tf; lso.GetScalar(tf, "TransferFunc");
+				switch ((eTransfFunc)tf) {
+				case eTansig_mod:
+					layers_.push_back(LayerPtr(new CLayer<T, ET, TansigMod<ET> >(lso)));
+					break;
+				case eTansig:
+					layers_.push_back(LayerPtr(new CLayer<T, ET, Tansig<ET> >(lso)));
+					break;
+				case ePurelin:
+					layers_.push_back(LayerPtr(new CLayer<T, ET, Purelin<ET> >(lso)));
+					break;
+				default:
+					throw std::runtime_error("Unknown transfer function");
+				}
+				break;
+			}
+		case Layer<T, ET>::eFLayer:
+			{
+				int tf; lso.GetScalar(tf, "TransferFunc");
+				switch ((eTransfFunc)tf) {
+				case eTansig_mod:
+					layers_.push_back(LayerPtr(new FLayer<T, ET, TansigMod<ET> >(lso)));
+					break;
+				case eTansig:
+					layers_.push_back(LayerPtr(new FLayer<T, ET, Tansig<ET> >(lso)));
+					break;
+				case ePurelin:
+					layers_.push_back(LayerPtr(new FLayer<T, ET, Purelin<ET> >(lso)));
+					break;
+				default:
+					throw std::runtime_error("Unknown transfer function");
+				}
+				break;
+			}
 		default:
+			file.close();
 			throw std::runtime_error("Unknown layer type");
 		}
 	}
@@ -540,11 +527,32 @@ int CNNet<T, ET>::LoadFromFile(const std::string& filename) {
 }
 
 template< template<class> class T, class ET>
-int CNNet<T, ET>::SaveToFile(const std::string& filename) {
+int CNNet<T, ET>::SaveToFileSimple(const std::string& filename) {
+	std::fstream file(filename.c_str(), std::fstream::in | std::fstream::out); 
+
+	if(! file.is_open()){
+		std::stringstream ss;
+		ss<<"Failed to open: ";
+		ss<<filename;
+		ss<<std::endl;
+		throw std::runtime_error(ss.str());
+	}
+	SimpleLoadSaveObj<T, ET> lso(file);	
+	int ver = __CNN_FILE_VERSION;
+	lso.AddScalar(ver, "Version");
+	lso.AddScalar((int)layers_.size(), "nlayers");
+	lso.AddScalar((int)ninputs_, "nInputs");
+	lso.AddScalar(input_width_, "inputWidth");
+	lso.AddScalar(input_height_, "inputHeight");
+	std::vector<LayerPtr>::const_iterator it;
+	for (it = layers_.begin(); it !=layers_.end(); ++it) {
+		(*it)->Save(lso, false);
+	}
+
+	file.close();
 	return 0;
 }
 
-#endif //HAVE_HDF5
 
     //=========================== Simulation
     //Perform propagation of inputs from the input layer to the output layer

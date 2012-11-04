@@ -6,7 +6,7 @@ clear;
 clc;
 clear classes;
 
-addpath('..\m_files');
+addpath('..\..\m_files');
 
 %Load the digits into workspace
 norb_train_reader.num_samples = 291600;

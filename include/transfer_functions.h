@@ -55,7 +55,7 @@ public:
 		T x = T(0.66666667/1.7159*(1.7159+fn_out)*(1.7159-fn_out));
 		return x*x; 
 	}
-	std::string name() { return "tansig_mod";}
+	std::string name() const { return "tansig_mod";}
 };
 
 template <class T>
@@ -74,7 +74,7 @@ public:
 	{
 		return 0; 
 	}
-	std::string name() { return "purelin";}
+	std::string name() const { return "purelin";}
 };
 
 template <class T>
@@ -93,7 +93,7 @@ public:
 	{
 		return (1-fn_out*fn_out)*(1-fn_out*fn_out); 
 	}
-	std::string name() { return "tansig";}
+	std::string name() const { return "tansig";}
 };
 
 }

@@ -23,28 +23,17 @@
 #ifndef __CUDACNNTESTS_PRECOMP_H__
 #define __CUDACNNTESTS_PRECOMP_H__
 
-#include "cnnconfig.h"
 
 #include <limits.h>
 #include <stdexcept>
-#include <fstream>
 #include <iostream>
+#include <fstream>
 #include <time.h>
 #include <memory>
 #include <list>
 #include <float.h>
 
-#ifdef HAVE_CUDA
-#include <cuda.h>
-#include "cuda_runtime_api.h"
-
-#endif
-
 #include "gtest/gtest.h"
-#include "common.h"
-#include "tensor.h"
-
-#include "exceptions.h"
 
 #include "cudacnn.h"
 

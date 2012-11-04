@@ -41,57 +41,7 @@
 #include <mat.h>
 #include <matrix.h>
 
-#include "cnnconfig.h"
-
-#ifdef HAVE_BOOST
-#include <boost/shared_ptr.hpp>
-#else
-#include <memory>
-#endif //HAVE_BOOST
-
-
-#ifdef HAVE_CUDA
-#include <cuda.h>
-#endif
-
-#include "common.h"
-#include "assert.h"
-#include "exceptions.h"
-#include "tensor.h"
-
-#ifdef HAVE_CUDA
-#include "tensor_cuda.h"
-#include "utils.cuh"
-#endif
-
-#include "transfer_functions.h"
-#include "performance_functions.h"
-
-#include "layer.hpp"
-#include "clayer.h"
-#include "flayer.h"
-#include "player.h"
-
-//#ifdef HAVE_CUDA
-#include "clayer_cuda.h"
-#include "flayer_cuda.h"
-#include "player_cuda.h"
-//#endif
-
-#ifdef HAVE_HDF5
-//TODO: Find out why it's different and fix if possible
-//#ifdef _WIN32
-#include "cpp/H5Cpp.h"
-//#else
-//#include "H5Cpp.h"
-//#endif  //_WIN32
-
-#include "hdf5_helper.h"
-
-#endif //HAVE_HDF5
-
-#include "conv_net.h"
-#include "trainer.h"
+#include "cudacnn.h"
 
 #include "mexcnnconfig.h"
 

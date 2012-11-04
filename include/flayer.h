@@ -31,6 +31,7 @@ class FLayer<Tensor, T, TF>: public FLayerT<Tensor, T, TF>
 {
 public:
 	FLayer(const Tensor<T>& weights, const Tensor<T>& biases, bool is_trainable) : FLayerT<Tensor, T, TF>(weights, biases, is_trainable){};
+	FLayer(typename Layer<Tensor,T>::ILoadSaveObject& save_load_obj) : 	FLayerT<Tensor, T, TF>(save_load_obj) {};
 	void Propagate(const Tensor<T>& input);
 	void BackPropagate(const Tensor<T>& input, Tensor<T>& dedx_prev);
 	/* Backpropagate and accumulate Hessian. Before starting Hessian computation iterations,

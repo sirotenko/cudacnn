@@ -28,7 +28,7 @@ clear classes;
 clear;
 clc;
 
-addpath('../m_files');
+addpath('../../m_files');
 
 %%
 %Load the digits into workspace
