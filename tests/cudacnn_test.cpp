@@ -9,6 +9,18 @@ TEST(CNNetTest, ReadFromHDF)
 }
 #endif //HAVE_HDF5
 
+TEST(CNNetTest, ConvertFromHDF5ToSimple)
+{
+	CNNetCudaF cnnet;
+	//ASSERT_NO_THROW(cnnet.LoadFromFile("test_mnist_net.h5"));
+	cnnet.LoadFromFile("test_mnist_net.h5");
+	//ASSERT_NO_THROW(cnnet.SaveToFileSimple("test_mnist_net.bin"));
+	cnnet.SaveToFileSimple("test_mnist_net.bin");
+}
+
+
+
+
 int main(int argc, char **argv) {
     std::srand(static_cast<unsigned int> (time(0)));
 

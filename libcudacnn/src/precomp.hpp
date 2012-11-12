@@ -3,6 +3,8 @@
 
 #include <string>
 #include <sstream>
+#include <iostream>
+#include <fstream>
 #include <exception>
 #include <stdexcept>
 #include <vector>

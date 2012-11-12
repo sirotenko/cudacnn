@@ -34,6 +34,7 @@ public:
 	CLayer(UINT inp_width, UINT inp_height, bool is_trainable, 
 		const Tensor<T>& weights, const Tensor<T>& biases, const Tensor<int>& con_map) : 
 		CLayerT<Tensor, T, TF>(inp_width, inp_height, is_trainable, weights, biases, con_map) {};
+	CLayer(typename Layer<Tensor,T>::ILoadSaveObject& save_load_obj) : CLayerT<Tensor, T, TF>(save_load_obj) {};
 
 	//Simple implementation (for testing)
 	virtual void Propagate(const Tensor<T>& input);

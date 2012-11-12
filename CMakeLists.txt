@@ -249,8 +249,8 @@ if(WITH_HDF5)
 	#In windows FindHDF5 sometimes give strange results, so need to check this and fix manually if needed
 	set(HDF5_INCLUDE_DIRS ${HDF5_INCLUDE_DIRS} CACHE PATH "HDF5: include path" FORCE)
 	set(HDF5_LIBRARIES ${HDF5_LIBRARIES} CACHE PATH "HDF5: hdf5 lib path" FORCE)	
-	message(STATUS "HDF5_INCLUDE_DIRS = ${HDF5_INCLUDE_DIRS}")
-	message(STATUS "HDF5_LIBRARIES = ${HDF5_LIBRARIES}")
+	#message(STATUS "HDF5_INCLUDE_DIRS = ${HDF5_INCLUDE_DIRS}")
+	#message(STATUS "HDF5_LIBRARIES = ${HDF5_LIBRARIES}")
 	include_directories(${HDF5_INCLUDE_DIRS})	
 endif()
 ############################### GTest ################################

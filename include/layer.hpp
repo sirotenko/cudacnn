@@ -104,16 +104,16 @@ public:
 		virtual void AddArray(const TT<int>& arr, const std::string name) = 0; 
 		virtual void AddString(const std::string str, const std::string name) = 0; 
 		//Loading interface
-		virtual void GetScalar(T& scal, const std::string name) = 0; 
-		virtual void GetScalar(int& scal, const std::string name) = 0; 
-		virtual void GetScalar(UINT& scal, const std::string name) = 0; 
-		virtual void GetArray(TT<T>& arr, const std::string name) = 0; 
-		virtual void GetArray(TT<int>& arr, const std::string name) = 0; 
-		virtual void GetString(std::string& str, const std::string name) = 0; 
+		virtual void GetScalar(T& scal, const std::string name) const = 0; 
+		virtual void GetScalar(int& scal, const std::string name) const = 0; 
+		virtual void GetScalar(UINT& scal, const std::string name) const = 0; 
+		virtual void GetArray(TT<T>& arr, const std::string name) const = 0; 
+		virtual void GetArray(TT<int>& arr, const std::string name) const = 0; 
+		virtual void GetString(std::string& str, const std::string name) const = 0; 
 		virtual ~ILoadSaveObject(){};
 	};
-	virtual void Save(ILoadSaveObject& save_load_obj, bool dbg) = 0;
-	virtual void Load(ILoadSaveObject& save_load_obj, bool dbg) = 0;
+	virtual void Save(ILoadSaveObject& save_load_obj, bool dbg) const = 0;
+	virtual void Load(const ILoadSaveObject& save_load_obj, bool dbg) = 0;
 	virtual eLayerType layer_type() const = 0;
 
 protected:
@@ -218,8 +218,15 @@ public:
 		this->biases_ = biases;
 		this->con_map_ = con_map;
 	};
-	virtual void Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg = false);
-	virtual void Load(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg = false);
+	//Caller should take care about reading transfer function type before calling this constructor
+	CLayerT(const typename Layer<TT,T>::ILoadSaveObject& save_load_obj)	
+	{	
+		Load(save_load_obj,false);	
+		this->out_ = MainTensorType(input_width_ - weights_.w()+ 1, input_height_ - weights_.h() + 1,  con_map_.h());
+	}
+
+	virtual void Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg = false) const;
+	virtual void Load(const typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg = false);
 	const TT<int>& con_map() const { return con_map_; };
 
 protected:	
@@ -235,13 +242,11 @@ template <template <class> class TT, class T, class TF>
 class CLayer;
 
 template <template <class> class TT, class T, class TF>
-void CLayerT<TT,T,TF>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
+void CLayerT<TT,T,TF>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg) const
 {
-	save_load_obj.AddScalar(this->is_trainable_ ? 1 : 0, "Trainable");
 	save_load_obj.AddString("clayer", "LayerType");
+	save_load_obj.AddScalar(this->is_trainable_ ? 1 : 0, "Trainable");
 	save_load_obj.AddScalar(this->weights().d2(),"NumFMaps");
-	//save_load_obj.AddScalar(out().w(),"OutFMapWidth");
-	//save_load_obj.AddScalar(out().h(),"OutFMapHeight");
     save_load_obj.AddScalar(this->input_width_,"InpWidth");
     save_load_obj.AddScalar(this->input_height_,"InpHeight");
 
@@ -261,18 +266,25 @@ void CLayerT<TT,T,TF>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj
 }
 
 template <template <class> class TT, class T, class TF>
-void CLayerT<TT,T,TF>::Load(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
+void CLayerT<TT,T,TF>::Load(const typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
 {
-	int num_fmaps, out_width, out_height;
+	std::string layer_type, transfer_func_name;
+	save_load_obj.GetString(layer_type, "LayerType");
+	if(layer_type.compare("clayer")) throw std::runtime_error("Layer type missmatch");
+	int num_fmaps, is_trainable_int;
+	save_load_obj.GetScalar(is_trainable_int, "Trainable");
 	save_load_obj.GetScalar(num_fmaps,"NumFMaps");
-	save_load_obj.GetScalar(out_width,"OutFMapWidth");
-	save_load_obj.GetScalar(out_height,"OutFMapHeight");
+	save_load_obj.GetScalar(this->input_width_,"InpWidth");
+	save_load_obj.GetScalar(this->input_height_,"InpHeight");
+
 	save_load_obj.GetArray(this->weights_,"Weights");
 	save_load_obj.GetArray(this->biases_,"Biases");
 	save_load_obj.GetArray(this->con_map_,"conn_map");
-	input_width_ = out_width + this->weights_.w() - 1;
-	input_height_ = out_height + this->weights_.h() - 1;
+	save_load_obj.GetString(transfer_func_name,"TransferFunc");
+	if(transfer_func_name.compare(this->transfer_function_.name())) throw std::runtime_error("Transfer function type missmatch");
+	
 	ninputs_ = this->weights_.d();
+	is_trainable_ = is_trainable_int == 0 ? false : true;
 
 	if(dbg){ //Add all data
 		save_load_obj.GetArray(this->out_, "Output");
@@ -301,9 +313,14 @@ public:
 		this->biases_ = biases;
 		this->is_trainable_ = is_trainable;
 	}
+	FLayerT(const typename Layer<TT,T>::ILoadSaveObject& save_load_obj)
+	{
+		Load(save_load_obj, false);
+		this->out_ = MainTensorType(num_neurons_,1,1);   
+	}
 	
-	virtual void Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg);
-	virtual void Load(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg);
+	virtual void Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg) const;
+	virtual void Load(const typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg);
 protected:
 	TF transfer_function_;
 	UINT num_neurons_;	
@@ -314,10 +331,10 @@ class FLayer;
 
 
 template <template <class> class TT, class T, class TF>
-void FLayerT<TT, T, TF>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
+void FLayerT<TT, T, TF>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg) const
 {	
-	save_load_obj.AddScalar(this->is_trainable_ ? 1 : 0, "Trainable");
 	save_load_obj.AddString("flayer", "LayerType");
+	save_load_obj.AddScalar(this->is_trainable_ ? 1 : 0, "Trainable");
 	save_load_obj.AddArray(this->weights(),"Weights");
 	save_load_obj.AddArray(this->biases(),"Biases");
 	save_load_obj.AddString(this->transfer_function_.name(), "TransferFunc");
@@ -333,12 +350,19 @@ void FLayerT<TT, T, TF>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load_o
 }
 
 template <template <class> class TT, class T, class TF>
-void FLayerT<TT, T, TF>::Load(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
+void FLayerT<TT, T, TF>::Load(const typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
 {
-	// FIXME add is_trainable_ to all Load's
-
+	std::string layer_type, transfer_func_name;
+	save_load_obj.GetString (layer_type, "LayerType");
+	if(layer_type.compare("flayer")) throw std::runtime_error("Layer type missmatch");
+	int is_trainable_int;
+	save_load_obj.GetScalar(is_trainable_int, "Trainable");
+	is_trainable_ = is_trainable_int == 0 ? false : true;
 	save_load_obj.GetArray(this->weights_,"Weights");
 	save_load_obj.GetArray(this->biases_,"Biases");
+	save_load_obj.GetString(transfer_func_name, "TransferFunc");
+	if(layer_type.compare(this->transfer_function_.name())) throw std::runtime_error("Transfer function type missmatch");
+	
 	if(dbg){ //Add all data
 		save_load_obj.GetArray(this->out_, "Output");
 		save_load_obj.GetArray(this->de_dw_, "dEdW");
@@ -385,14 +409,18 @@ public:
 		wdims[0] = 0;
 		this->weights_ = MainTensorType(wdims);
 		this->biases_ = MainTensorType(wdims);
-
 		this->out_ = MainTensorType(params.inp_width / params.sx, params.inp_height / params.sy, params.ninputs);
+		
+	}
+	PoolingLayerT(const typename Layer<TT,T>::ILoadSaveObject& save_load_obj) {
+		Load(save_load_obj, false);
+		this->out_ = MainTensorType(input_width_ / sx_, input_height_ / sy_, ninputs_);
 	}
 	UINT sx() const { return sx_; }
 	UINT sy() const { return sy_; }
     PoolingType pooling_type() const { return pooling_type_; }
-	virtual void Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg);
-	virtual void Load(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg);
+	virtual void Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg) const;
+	virtual void Load(const typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg);
 
 protected:	
 	UINT sx_;
@@ -411,13 +439,11 @@ class PoolingLayer ;
 
 
 template <template <class> class TT, class T>
-void PoolingLayerT<TT, T>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
+void PoolingLayerT<TT, T>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg) const
 {
-	save_load_obj.AddScalar(this->is_trainable_ ? 1 : 0, "Trainable");
 	save_load_obj.AddString("pooling", "LayerType");	
+	save_load_obj.AddScalar(this->is_trainable_ ? 1 : 0, "Trainable");
 	save_load_obj.AddScalar(this->out().d(),"NumFMaps");
-	//save_load_obj.AddScalar(out().w(),"OutFMapWidth");
-	//save_load_obj.AddScalar(out().h(),"OutFMapHeight");
     save_load_obj.AddScalar(this->input_width_,"InpWidth");
     save_load_obj.AddScalar(this->input_height_,"InpHeight");
 
@@ -434,7 +460,6 @@ void PoolingLayerT<TT, T>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load
     default:
         throw std::runtime_error("Unknown pooling function detected while saving layer info");
     }
-    //save_load_obj.AddScalar(static_cast<UINT>(pooling_type()),"PoolingType");
 	if(dbg){ //Add all data
 		save_load_obj.AddArray(this->out(), "Output");
 		save_load_obj.AddArray(this->de_dw_, "dEdW");
@@ -448,12 +473,17 @@ void PoolingLayerT<TT, T>::Save(typename Layer<TT,T>::ILoadSaveObject& save_load
 }
 
 template <template <class> class TT, class T>
-void PoolingLayerT<TT, T>::Load(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
+void PoolingLayerT<TT, T>::Load(const typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg)
 {
-	int out_width, out_height;
+	std::string layer_type;
+	save_load_obj.GetString(layer_type, "LayerType");	
+	if(layer_type.compare("pooling")) throw std::runtime_error("Layer type missmatch");
+	int is_trainable_int;
+	save_load_obj.GetScalar(is_trainable_int, "Trainable");
+	is_trainable_ = is_trainable_int == 0 ? false : true;
 	save_load_obj.GetScalar(ninputs_,"NumFMaps");
-	save_load_obj.GetScalar(out_width,"OutFMapWidth");
-	save_load_obj.GetScalar(out_height,"OutFMapHeight");
+	save_load_obj.GetScalar(this->input_width_,"InpWidth");
+	save_load_obj.GetScalar(this->input_height_,"InpHeight");
 
 	save_load_obj.GetScalar(sx_,"SXRate");
 	save_load_obj.GetScalar(sy_,"SYRate");
@@ -464,8 +494,10 @@ void PoolingLayerT<TT, T>::Load(typename Layer<TT,T>::ILoadSaveObject& save_load
 
     if(pooling_fnc.compare(std::string("average")) == 0) pooling_type_ = eAverage;
     if(pooling_fnc.compare(std::string("max")) == 0) pooling_type_ = eMax;
-	input_width_ = out_width*sx_;
-	input_height_ = out_height*sy_;
+	std::vector<UINT> wdims(1);
+	wdims[0] = 0;
+	this->weights_ = MainTensorType(wdims);
+	this->biases_ = MainTensorType(wdims);
 
 	if(dbg){ //Add all data
 		save_load_obj.GetArray(this->out_, "Output");

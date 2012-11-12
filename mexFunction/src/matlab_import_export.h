@@ -36,12 +36,12 @@ public:
 	virtual void AddArray(const TT<int>& arr, const std::string name); 
 	virtual void AddString(const std::string str, const std::string name); 
 
-	virtual void GetScalar(T& scal, const std::string name); 
-	virtual void GetScalar(int& scal, const std::string name); 
-	virtual void GetScalar(UINT& scal, const std::string name); 
-	virtual void GetArray(TT<T>& arr, const std::string name); 
-	virtual void GetArray(TT<int>& arr, const std::string name); 
-	virtual void GetString(std::string& str, const std::string name); 
+	virtual void GetScalar(T& scal, const std::string name) const; 
+	virtual void GetScalar(int& scal, const std::string name) const; 
+	virtual void GetScalar(UINT& scal, const std::string name) const; 
+	virtual void GetArray(TT<T>& arr, const std::string name) const; 
+	virtual void GetArray(TT<int>& arr, const std::string name) const; 
+	virtual void GetString(std::string& str, const std::string name) const; 
 	virtual ~MatlabSaveLoad(){};
 private:
 	mxArray* struct_arr_;
@@ -81,32 +81,32 @@ void MatlabSaveLoad<TT,T>::AddString(const std::string str, const std::string na
 }
 //================ Getters ============================
 template<template<class> class TT, class T>
-void MatlabSaveLoad<TT,T>::GetScalar(T& scal, const std::string name)
+void MatlabSaveLoad<TT,T>::GetScalar(T& scal, const std::string name) const
 {
 	scal = MatlabTools::GetScalar<T>(struct_arr_, name.c_str());
 }
 template<template<class> class TT, class T>
-void MatlabSaveLoad<TT,T>::GetScalar(UINT& scal, const std::string name)
+void MatlabSaveLoad<TT,T>::GetScalar(UINT& scal, const std::string name) const
 {
 	scal = MatlabTools::GetScalar<UINT>(struct_arr_, name.c_str());
 }
 template<template<class> class TT, class T>
-void MatlabSaveLoad<TT,T>::GetScalar(int& scal, const std::string name)
+void MatlabSaveLoad<TT,T>::GetScalar(int& scal, const std::string name) const
 {
 	scal = MatlabTools::GetScalar<int>(struct_arr_, name.c_str());
 }
 template<template<class> class TT, class T>
-void MatlabSaveLoad<TT,T>::GetArray(TT<T>& arr, const std::string name)
+void MatlabSaveLoad<TT,T>::GetArray(TT<T>& arr, const std::string name) const
 {
 	MatlabTools::GetArray<T>(struct_arr_, name.c_str(),arr);
 }
 template<template<class> class TT, class T>
-void MatlabSaveLoad<TT,T>::GetArray(TT<int>& arr, const std::string name)
+void MatlabSaveLoad<TT,T>::GetArray(TT<int>& arr, const std::string name) const
 {
 	MatlabTools::GetArray<int>(struct_arr_, name.c_str(),arr);
 }
 template<template<class> class TT, class T>
-void MatlabSaveLoad<TT,T>::GetString(std::string& str, const std::string name)
+void MatlabSaveLoad<TT,T>::GetString(std::string& str, const std::string name) const
 {
 	str = MatlabTools::GetSVal(struct_arr_,name.c_str());
 }

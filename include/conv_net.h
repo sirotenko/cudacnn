@@ -50,6 +50,9 @@ namespace cudacnn {
         int LoadFromFile(const std::string& filename);
         int SaveToFile(const std::string& filename);
 #endif
+		int LoadFromFileSimple(const std::string& filename);
+		int SaveToFileSimple(const std::string& filename);
+
         //=========================== Simulation
         //Perform propagation of inputs from the input layer to the output layer
         //Network must be initialized and inputs loaded
@@ -343,7 +346,213 @@ namespace cudacnn {
         return -1;
     }
 
-#endif
+#endif //HAVE_HDF5
+
+//If no HDF5 support, use very simple binary format for reading and writing 
+//networks
+
+//Define simple load and save interface classes for layers
+template<template <class> class MAT, class T>
+class SimpleLoadSaveObj : public Layer<MAT,T>::ILoadSaveObject
+{
+public:
+	SimpleLoadSaveObj(std::fstream& file) : file_(file){	}
+	virtual void AddScalar(T scal, const std::string name) { AddScalarT<T>(scal, name);	} 
+	virtual void AddScalar(int scal, const std::string name) { AddScalarT<int>(scal, name); }
+	virtual void AddScalar(UINT scal, const std::string name){ AddScalarT<UINT>(scal, name); }
+	virtual void AddArray(const MAT<T>& arr, const std::string name) { AddArrayT<T>(arr, name); }
+	virtual void AddArray(const MAT<int>& arr, const std::string name) { AddArrayT<int>(arr, name); }
+	virtual void AddString(const std::string str, const std::string name) { 
+		file_.write(name.c_str(), name.size());
+		size_t str_sz = str.size();
+		file_.write((char*)&str_sz, sizeof(str_sz));
+		file_.write(str.c_str(), str.size());
+	}
+	//Loading interface
+	virtual void GetScalar(T& scal, const std::string name) const { GetScalarT<T>(scal, name);	} 
+	virtual void GetScalar(int& scal, const std::string name) const { GetScalarT<int>(scal, name);	} 
+	virtual void GetScalar(UINT& scal, const std::string name) const { GetScalarT<UINT>(scal, name);	} 
+	virtual void GetScalar(double& scal, const std::string name) const { GetScalarT<double>(scal, name);	} 
+	virtual void GetArray(MAT<T>& arr, const std::string name) const { GetArrayT<T>(arr, name); }
+	virtual void GetArray(MAT<int>& arr, const std::string name) const { GetArrayT<int>(arr, name); }
+	virtual void GetString(std::string& str, const std::string name) const { 
+		char* name_in = new char[name.size()]; //Ignored
+		file_.read(name_in, name.size());
+		delete[] name_in;
+		size_t str_sz;
+		file_.read((char*)&str_sz, sizeof(str_sz));
+		char* str_out = new char[str_sz];
+		file_.read(str_out, str_sz);
+		str = str_out;
+		delete[] str_out;
+	}
+private:
+	template<class TIn>
+	void AddScalarT(TIn scal, const std::string name){
+		file_.write(name.c_str(), name.size());
+		file_.write((char*)&scal, sizeof(TIn));
+	}
+	template<class TIn>
+	void AddArrayT(const MAT<TIn>& arr, const std::string name){
+		file_.write(name.c_str(), name.size());
+		unsigned ndims = (int)arr.num_dims();
+		file_.write((char*)&ndims, sizeof(ndims));
+		file_.write((char*)&arr.dims()[0], ndims*sizeof(unsigned));
+		unsigned nelems = arr.num_elements();
+		file_.write((char*)&nelems, sizeof(nelems));
+		file_.write((char*)arr.data(), arr.num_elements()*sizeof(TIn));
+	}
+	template<class TIn>
+	void GetScalarT(TIn& scal, const std::string name)  const {
+		char* name_in = new char[name.size()]; 
+		file_.read(name_in, name.size());
+		if(!name.compare(name_in)) {
+			std::stringstream ss;
+			ss<<"Wrong file format. ";
+			ss<<name;
+			ss<<" field not found.";
+			ss<<std::endl;
+			throw std::runtime_error(ss.str());
+		}
+		file_.read((char*)&scal, sizeof(TIn));
+		delete[] name_in;
+	}
+	template<class TIn>
+	void GetArrayT(MAT<TIn>& arr, const std::string name) const {
+		char* name_in = new char[name.size()]; 
+		file_.read(name_in, name.size());
+		if(!name.compare(name_in)) {
+			std::stringstream ss;
+			ss<<"Wrong file format. ";
+			ss<<name;
+			ss<<" field not found.";
+			ss<<std::endl;
+			throw std::runtime_error(ss.str());
+		}
+
+		delete[] name_in;
+		unsigned ndims;
+		file_.read((char*)&ndims, sizeof(ndims));
+		std::vector<unsigned> dims(ndims);
+		file_.read((char*)&dims[0], ndims*sizeof(unsigned));
+		unsigned nelems = arr.num_elements();
+		file_.read((char*)&nelems, sizeof(nelems));
+		arr = MAT<TIn>(dims);
+		file_.read((char*)arr.data(), arr.num_elements()*sizeof(TIn));
+	}
+
+	std::fstream& file_;
+};
+
+
+template< template<class> class T, class ET>
+int CNNet<T, ET>::LoadFromFileSimple(const std::string& filename) {
+	std::fstream file(filename.c_str(), std::fstream::in | std::fstream::out); 
+	
+	if(! file.is_open()){
+		std::stringstream ss;
+		ss<<"Failed to open: ";
+		ss<<filename;
+		ss<<std::endl;
+		throw std::runtime_error(ss.str());
+	}
+	SimpleLoadSaveObj<T, ET> lso(file);	
+	int ver;
+	lso.GetScalar(ver, "Version");
+	if (ver != __CNN_FILE_VERSION)
+		throw std::runtime_error("Unsupported version of CNN file");
+
+	UINT nlayers_; lso.GetScalar(nlayers_, "nlayers");
+	int ninputs_int; lso.GetScalar(ninputs_int, "nInputs");
+	ninputs_ = (BYTE) ninputs_int;
+	lso.GetScalar(input_width_, "inputWidth");
+	lso.GetScalar(input_height_, "inputHeight");
+
+	//Impossible number of layers
+	assert(nlayers_ < INT_MAX);
+	layers_.clear();
+	for (unsigned i = 0; i < nlayers_; i++) {
+		int lt_int; lso.GetScalar(lt_int, "LayerType");
+		typename Layer<T, ET>::eLayerType lt = (typename Layer<T,ET>::eLayerType)lt_int;
+		switch (lt) {
+		case Layer<T, ET>::ePLayer:
+			{
+				layers_.push_back(LayerPtr(new PoolingLayer<T, ET > (lso)));
+				break;
+			}
+		case Layer<T, ET>::eCLayer:
+			{
+				int tf; lso.GetScalar(tf, "TransferFunc");
+				switch ((eTransfFunc)tf) {
+				case eTansig_mod:
+					layers_.push_back(LayerPtr(new CLayer<T, ET, TansigMod<ET> >(lso)));
+					break;
+				case eTansig:
+					layers_.push_back(LayerPtr(new CLayer<T, ET, Tansig<ET> >(lso)));
+					break;
+				case ePurelin:
+					layers_.push_back(LayerPtr(new CLayer<T, ET, Purelin<ET> >(lso)));
+					break;
+				default:
+					throw std::runtime_error("Unknown transfer function");
+				}
+				break;
+			}
+		case Layer<T, ET>::eFLayer:
+			{
+				int tf; lso.GetScalar(tf, "TransferFunc");
+				switch ((eTransfFunc)tf) {
+				case eTansig_mod:
+					layers_.push_back(LayerPtr(new FLayer<T, ET, TansigMod<ET> >(lso)));
+					break;
+				case eTansig:
+					layers_.push_back(LayerPtr(new FLayer<T, ET, Tansig<ET> >(lso)));
+					break;
+				case ePurelin:
+					layers_.push_back(LayerPtr(new FLayer<T, ET, Purelin<ET> >(lso)));
+					break;
+				default:
+					throw std::runtime_error("Unknown transfer function");
+				}
+				break;
+			}
+		default:
+			file.close();
+			throw std::runtime_error("Unknown layer type");
+		}
+	}
+
+	file.close();
+	return 0;
+}
+
+template< template<class> class T, class ET>
+int CNNet<T, ET>::SaveToFileSimple(const std::string& filename) {
+	std::fstream file(filename.c_str(), std::fstream::in | std::fstream::out); 
+
+	if(! file.is_open()){
+		std::stringstream ss;
+		ss<<"Failed to open: ";
+		ss<<filename;
+		ss<<std::endl;
+		throw std::runtime_error(ss.str());
+	}
+	SimpleLoadSaveObj<T, ET> lso(file);	
+	int ver = __CNN_FILE_VERSION;
+	lso.AddScalar(ver, "Version");
+	lso.AddScalar((int)layers_.size(), "nlayers");
+	lso.AddScalar((int)ninputs_, "nInputs");
+	lso.AddScalar(input_width_, "inputWidth");
+	lso.AddScalar(input_height_, "inputHeight");
+	std::vector<LayerPtr>::const_iterator it;
+	for (it = layers_.begin(); it !=layers_.end(); ++it) {
+		(*it)->Save(lso, false);
+	}
+
+	file.close();
+	return 0;
+}
+
 
     //=========================== Simulation
     //Perform propagation of inputs from the input layer to the output layer

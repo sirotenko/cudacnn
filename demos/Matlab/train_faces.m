@@ -1,52 +1,33 @@
-%Convolutional neural network for handwriten digits recognition: training
-%and simulation.
-%(c)Mikhail Sirotenko, 2009.
-%This program implements the convolutional neural network for MNIST handwriten 
-%digits recognition, created by Yann LeCun. CNN class allows to make your
-%own convolutional neural net, defining arbitrary structure and parameters.
-%It is assumed that MNIST database is located in './MNIST' directory.
-%References:
-%1. Y. LeCun, L. Bottou, G. Orr and K. Muller: Efficient BackProp, in Orr, G.
-%and Muller K. (Eds), Neural Networks: Tricks of the trade, Springer, 1998
-%URL:http://yann.lecun.com/exdb/publis/index.html
-%2. Y. LeCun, L. Bottou, Y. Bengio and P. Haffner: Gradient-Based Learning
-%Applied to Document Recognition, Proceedings of the IEEE, 86(11):2278-2324, November 1998
-%URL:http://yann.lecun.com/exdb/publis/index.html
-%3. Patrice Y. Simard, Dave Steinkraus, John C. Platt: Best Practices for
-%Convolutional Neural Networks Applied to Visual Document Analysis
-%URL:http://research.microsoft.com/apps/pubs/?id=68920
-%4. Thanks to Mike O'Neill for his great article, wich is summarize and
-%generalize all the information in 1-3 for better understandig for
-%programming:
-%URL: http://www.codeproject.com/KB/library/NeuralNetRecognition.aspx
-%5. Also thanks to Jake Bouvrie for his "Notes on Convolutional Neural
-%Networks", particulary for the idea to debug the neural network using
-%finite differences
-%URL: http://web.mit.edu/jvb/www/cv.html
+%Demo script for training convolutional neural network for face detection
+%(c)Mikhail Sirotenko, 2012.
 
 clear classes;
 clear;
 clc;
 
-addpath('../m_files');
+addpath('../../m_files');
 
 %%
-%Load the digits into workspace
-mnist_train_reader.num_samples = 60000;
-mnist_train_reader.current = 1;
-mnist_train_reader.data_file = '../data/MNIST/train-images.idx3-ubyte';
-mnist_train_reader.label_file = '../data/MNIST/train-labels.idx1-ubyte';
-mnist_train_reader.buffer_size = 1000;
-mnist_train_reader.read = @mnist_datareader;
+%Load the faces into workspace
+load('../../data/FacesMIT/faces_train.mat');
+load('../../data/FacesMIT/non_faces_train.mat');
+load('../../data/FacesMIT/faces_test.mat');
+load('../../data/FacesMIT/non_faces_test.mat');
 
-mnist_test_reader.num_samples = 10000;
-mnist_test_reader.current = 1;
-mnist_test_reader.data_file = '../data/MNIST/t10k-images.idx3-ubyte';
-mnist_test_reader.label_file = '../data/MNIST/t10k-labels.idx1-ubyte';
-mnist_test_reader.buffer_size = 1000;
-mnist_test_reader.read = @mnist_datareader;
+mitface_train_reader.num_faces = length(faces_train);
+mitface_train_reader.num_nonfaces = length(nonfaces_train);
+mitface_train_reader.num_samples = length(faces_train) + length(nonfaces_train);
+mitface_train_reader.current = 1;
+mitface_train_reader.faces = faces_train;
+mitface_train_reader.nonfaces = nonfaces_train;
+mitface_train_reader.read = @mitfaces_datareader;
 
-%[I,labels,I_test,labels_test] = readMNIST(num_training_samples, '../data/MNIST/'); 
+mitface_test_reader.num_samples = length(faces_test) + length(nonfaces_test);
+mitface_test_reader.current = 1;
+mitface_train_reader.faces = faces_test;
+mitface_train_reader.nonfaces = nonfaces_test;
+
+mitface_test_reader.read = @mitfaces_datareader;
 
 %%
 
@@ -145,11 +126,11 @@ trainer.epochs = 10;
 trainer.mu = 0.0000001;
 %Training coefficient
 trainer.theta =  [50 30 20 10 5 5 5 1 1 1]/10000;
-trainer.TrainMethod = 'StochasticLM';
-%trainer.TrainMethod = 'StochasticGD';
+%trainer.TrainMethod = 'StochasticLM';
+trainer.TrainMethod = 'StochasticGD';
 % HcalcMode = 1 - Mini batch hessian recomputation
 % HcalcMode = 2 - Running estimate hessian
-trainer.HcalcMode = 1;
+trainer.HcalcMode = 0;
 trainer.Hrecalc = 1000; %Number of iterations to passs for Hessian recalculation
 trainer.HrecalcSamplesNum = 30; %Number of samples for Hessian recalculation
 trainer.MCRUpdatePeriod = 1000;
@@ -159,7 +140,7 @@ trainer.RMSEUpdatePeriod = 30;
 %Images preprocessing. Resulting images have 0 mean and 1 standard
 %deviation. 
 %Actualy training
-cnnet = train(cnnet, trainer, mnist_train_reader, mnist_test_reader);
+cnnet = train(cnnet, trainer, mitface_train_reader, mitface_test_reader);
 
 
 

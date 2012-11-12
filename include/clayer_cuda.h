@@ -37,6 +37,7 @@ public:
 	CLayer(UINT inp_width, UINT inp_height, bool is_trainable,
 		const TensorGPU<T>& weights, const TensorGPU<T>& biases, const TensorGPU<int>& con_map) :
     CLayerT<TensorGPU, T, TF>(inp_width, inp_height, is_trainable, weights, biases, con_map) {};
+	CLayer(typename Layer<TensorGPU,T>::ILoadSaveObject& save_load_obj) : 	CLayerT<TensorGPU, T, TF>(save_load_obj) {};
 
 	//virtual int Destroy();
 	virtual void Propagate(const TensorGPU<T>& input);
@@ -70,7 +71,7 @@ public:
 	CLayer(UINT inp_width, UINT inp_height, bool is_trainable,
 		const TensorGPU<T>& weights, const TensorGPU<T>& tf_params, const TensorGPU<int>& conn_map) :
     CLayerT<TensorGPU, T, TF>(inp_width, inp_height, is_trainable, weights, tf_params, conn_map) {std::runtime_error("cudacnn lib compiled without CUDA support");};
-
+	CLayer(typename Layer<TensorGPU,T>::ILoadSaveObject& save_load_obj) : 	CLayerT<TensorGPU, T, TF>(save_load_obj) {std::runtime_error("cudacnn lib compiled without CUDA support");};
 	//virtual int Destroy();
 	virtual void Propagate(const TensorGPU<T>& input) {std::runtime_error("cudacnn lib compiled without CUDA support");};
 	virtual void BackPropagate(const TensorGPU<T>& input, TensorGPU<T>& dedx_prev) {std::runtime_error("cudacnn lib compiled without CUDA support");};
