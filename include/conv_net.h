@@ -544,7 +544,7 @@ int CNNet<T, ET>::SaveToFileSimple(const std::string& filename) {
 	lso.AddScalar((int)ninputs_, "nInputs");
 	lso.AddScalar(input_width_, "inputWidth");
 	lso.AddScalar(input_height_, "inputHeight");
-	std::vector<LayerPtr>::const_iterator it;
+	typename std::vector<LayerPtr>::const_iterator it;
 	for (it = layers_.begin(); it !=layers_.end(); ++it) {
 		(*it)->Save(lso, false);
 	}

@@ -222,7 +222,8 @@ public:
 	CLayerT(const typename Layer<TT,T>::ILoadSaveObject& save_load_obj)	
 	{	
 		Load(save_load_obj,false);	
-		this->out_ = MainTensorType(input_width_ - weights_.w()+ 1, input_height_ - weights_.h() + 1,  con_map_.h());
+		this->out_ = MainTensorType(input_width_ - this->weights_.w()+ 1, 
+                        this->input_height_ - this->weights_.h() + 1,  this->con_map_.h());
 	}
 
 	virtual void Save(typename Layer<TT,T>::ILoadSaveObject& save_load_obj, bool dbg = false) const;
@@ -284,7 +285,7 @@ void CLayerT<TT,T,TF>::Load(const typename Layer<TT,T>::ILoadSaveObject& save_lo
 	if(transfer_func_name.compare(this->transfer_function_.name())) throw std::runtime_error("Transfer function type missmatch");
 	
 	ninputs_ = this->weights_.d();
-	is_trainable_ = is_trainable_int == 0 ? false : true;
+	this->is_trainable_ = is_trainable_int == 0 ? false : true;
 
 	if(dbg){ //Add all data
 		save_load_obj.GetArray(this->out_, "Output");
@@ -357,7 +358,7 @@ void FLayerT<TT, T, TF>::Load(const typename Layer<TT,T>::ILoadSaveObject& save_
 	if(layer_type.compare("flayer")) throw std::runtime_error("Layer type missmatch");
 	int is_trainable_int;
 	save_load_obj.GetScalar(is_trainable_int, "Trainable");
-	is_trainable_ = is_trainable_int == 0 ? false : true;
+	this->is_trainable_ = is_trainable_int == 0 ? false : true;
 	save_load_obj.GetArray(this->weights_,"Weights");
 	save_load_obj.GetArray(this->biases_,"Biases");
 	save_load_obj.GetString(transfer_func_name, "TransferFunc");
@@ -480,7 +481,7 @@ void PoolingLayerT<TT, T>::Load(const typename Layer<TT,T>::ILoadSaveObject& sav
 	if(layer_type.compare("pooling")) throw std::runtime_error("Layer type missmatch");
 	int is_trainable_int;
 	save_load_obj.GetScalar(is_trainable_int, "Trainable");
-	is_trainable_ = is_trainable_int == 0 ? false : true;
+	this->is_trainable_ = is_trainable_int == 0 ? false : true;
 	save_load_obj.GetScalar(ninputs_,"NumFMaps");
 	save_load_obj.GetScalar(this->input_width_,"InpWidth");
 	save_load_obj.GetScalar(this->input_height_,"InpHeight");

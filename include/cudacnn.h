@@ -1,3 +1,20 @@
+#ifndef __CUDACNN_H__
+#define __CUDACNN_H__
+
+#include <string>
+#include <sstream>
+#include <iostream>
+#include <fstream>
+#include <exception>
+#include <stdexcept>
+#include <vector>
+#include <list>
+#include <cstddef>
+#include <cstdlib>
+#include <cmath>
+#include <cstring>
+#include <assert.h>
+
 #include "cnnconfig.h"
 
 #include "cnnlimits.h"
@@ -33,3 +50,4 @@
 #include "conv_net.h"
 #include "trainer.h"
 
+#endif //__CUDACNN_H__

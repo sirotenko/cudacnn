@@ -72,6 +72,11 @@ set(BUILD_MEX_FILES ON CACHE BOOL "Build Matlab mex files")
 # ===================================================
 set(BUILD_TESTS OFF CACHE BOOL "Build tests")
 
+# Build tools:
+# ===================================================
+set(BUILD_TOOLS OFF CACHE BOOL "Build tools")
+
+
 include(cudacnnPCHSupport.cmake REQUIRED)
 
 #if(MSVC)
@@ -265,6 +270,11 @@ if(BUILD_TESTS)
 #https://groups.google.com/forum/?fromgroups=#!topic/googletestframework/zHy-rrKz_Ho
 	add_subdirectory(3rdParty/gtest)
 	enable_testing(true)
+endif()
+
+############################### GTest ################################
+if(BUILD_TOOLS)
+	add_subdirectory(tools)
 endif()
 
 
