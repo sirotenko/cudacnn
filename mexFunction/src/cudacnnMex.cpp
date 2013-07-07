@@ -151,6 +151,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
 	//mwSize buflen = (mxGetM(prhs[1]) * mxGetN(prhs[1])) + 1;
 	/* copy the string data from prhs[0] into a C string input_ buf.    */
 	char* input_buf = mxArrayToString(prhs[1]);
+	try		{
 	if(strcmp(input_buf,"init")==0)	{
 		if (nrhs != 2) {
 			std::stringstream ss;
@@ -161,22 +162,14 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
 		}
 		delete cnn;
 		cnn = new CNNet<BaseTensor, BaseType>();
+
 #ifdef __CUDACNNMEX_CUDA
 #ifdef HAVE_CUDA
 		CudaInfoMatlab();
 #endif
 #endif
-		try		{
-			CNNetLoadFromMatlab(prhs[0],*cnn);
-		}
-#ifdef HAVE_CUDA
-		catch(CudaException& e)		{
-			mexErrMsgTxt(e.what());
-		}
-#endif
-		catch(std::runtime_error& e)		{
-			mexErrMsgTxt(e.what());
-		}
+
+		CNNetLoadFromMatlab(prhs[0],*cnn);
 
 		//TODO: Reconsider this to be called only when training is needed.
 		cnn->PrepareForTraining();
@@ -259,20 +252,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
 			ss<<"cnn - convolutional neural network class object \n";
 			mexErrMsgTxt(ss.str().c_str());
 		}
-		try		
-		{			
-			cnn->AverageHessian();
-		}
-#ifdef HAVE_CUDA
-		catch(CudaException& e)
-		{
-			mexErrMsgTxt(e.what());
-		}
-#endif
-		catch(std::runtime_error& e) 
-		{
-			mexErrMsgTxt(e.what());
-		}
+		cnn->AverageHessian();
 	}
     else if(strcmp(input_buf,"reset_hessian")==0) {
         if(!cnn) mexErrMsgTxt("CNN must be initialized first");
@@ -283,20 +263,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
             ss<<"cnn - convolutional neural network class object \n";
             mexErrMsgTxt(ss.str().c_str());
         }
-        try		
-        {			
-            cnn->ResetHessian();
-        }
-#ifdef HAVE_CUDA
-        catch(CudaException& e)	
-        {
-            mexErrMsgTxt(e.what());
-        }
-#endif
-        catch(std::runtime_error& e) 
-        {
-            mexErrMsgTxt(e.what());
-        }		
+        cnn->ResetHessian();
     }
 	else if(strcmp(input_buf,"compute_gradient")==0) {
 		if(!cnn) mexErrMsgTxt("CNN must be initialized first");
@@ -316,21 +283,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
 		}
 		BaseTensor<BaseType> inp;
 		GetArray<BaseType>(prhs[3], inp);
-		try		
-		{
-
 		cnn->BackpropGradients(err, inp);
-		}
-#ifdef HAVE_CUDA
-		catch(CudaException& e)	
-		{
-			mexErrMsgTxt(e.what());
-		}
-#endif
-		catch(std::runtime_error& e) 
-		{
-			mexErrMsgTxt(e.what());
-		}		
 	}
 	else if(strcmp(input_buf,"adapt")==0) {
 		if(!cnn) mexErrMsgTxt("CNN must be initialized first");
@@ -347,21 +300,7 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
 		BaseType tau = GetScalar<BaseType>(prhs[2]);
 		bool use_hessian = GetScalar<UINT>(prhs[3]) == 1 ? true : false;
 		BaseType mu = GetScalar<BaseType>(prhs[4]);
-		try		
-		{			
-
-			cnn->AdaptWeights(tau,use_hessian, mu);
-		}
-#ifdef HAVE_CUDA
-		catch(CudaException& e)	
-		{
-			mexErrMsgTxt(e.what());
-		}
-#endif
-		catch(std::runtime_error& e) 
-		{
-			mexErrMsgTxt(e.what());
-		}	
+		cnn->AdaptWeights(tau,use_hessian, mu);
 	}
 	else if(strcmp(input_buf,"destroy")==0) {
 		if (cnn == NULL)
@@ -376,6 +315,16 @@ void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[] )
 	else {
 		mexErrMsgTxt("Unknown command.");
 	}
+	}
+#ifdef HAVE_CUDA
+	catch(CudaException& e)		{
+		mexErrMsgTxt(e.what());
+	}
+#endif
+	catch(std::runtime_error& e)		{
+		mexErrMsgTxt(e.what());
+	}
+
     mxFree(input_buf);
 
 }

@@ -34,15 +34,15 @@ addpath('../../m_files');
 %Load the digits into workspace
 mnist_train_reader.num_samples = 60000;
 mnist_train_reader.current = 1;
-mnist_train_reader.data_file = '../data/MNIST/train-images.idx3-ubyte';
-mnist_train_reader.label_file = '../data/MNIST/train-labels.idx1-ubyte';
+mnist_train_reader.data_file = '../../data/MNIST/train-images.idx3-ubyte';
+mnist_train_reader.label_file = '../../data/MNIST/train-labels.idx1-ubyte';
 mnist_train_reader.buffer_size = 1000;
 mnist_train_reader.read = @mnist_datareader;
 
 mnist_test_reader.num_samples = 10000;
 mnist_test_reader.current = 1;
-mnist_test_reader.data_file = '../data/MNIST/t10k-images.idx3-ubyte';
-mnist_test_reader.label_file = '../data/MNIST/t10k-labels.idx1-ubyte';
+mnist_test_reader.data_file = '../../data/MNIST/t10k-images.idx3-ubyte';
+mnist_test_reader.label_file = '../../data/MNIST/t10k-labels.idx1-ubyte';
 mnist_test_reader.buffer_size = 1000;
 mnist_test_reader.read = @mnist_datareader;
 

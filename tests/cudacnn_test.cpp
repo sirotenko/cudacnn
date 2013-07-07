@@ -7,16 +7,18 @@ TEST(CNNetTest, ReadFromHDF)
 	CNNetCudaF cnnet;
 	ASSERT_NO_THROW(cnnet.LoadFromFile("test_mnist_net.h5"));
 }
-#endif //HAVE_HDF5
 
 TEST(CNNetTest, ConvertFromHDF5ToSimple)
 {
 	CNNetCudaF cnnet;
 	//ASSERT_NO_THROW(cnnet.LoadFromFile("test_mnist_net.h5"));
-	cnnet.LoadFromFile("test_mnist_net.h5");
+	//cnnet.LoadFromFile("test_mnist_net.h5");
 	//ASSERT_NO_THROW(cnnet.SaveToFileSimple("test_mnist_net.bin"));
-	cnnet.SaveToFileSimple("test_mnist_net.bin");
+	//cnnet.SaveToFileSimple("test_mnist_net.bin");
 }
+
+#endif //HAVE_HDF5
+
 
 
 
