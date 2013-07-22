@@ -21,7 +21,7 @@
 #define HAVE_CUDA
 
 /* HDF5 Library*/
-#define HAVE_HDF5
+/* #undef HAVE_HDF5 */
 
 /* version of cnn format in hdf5 file */
 #define __CNN_FILE_VERSION 2
