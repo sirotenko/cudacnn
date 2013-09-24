@@ -33,7 +33,7 @@ class PoolingLayer<TensorGPU,T>: public PoolingLayerT<TensorGPU, T>
 {
 public:
 	PoolingLayer(const typename PoolingLayerT<TensorGPU, T>::Params& params) : PoolingLayerT<TensorGPU, T>(params) {};
-	PoolingLayer(typename Layer<TensorGPU,T>::ILoadSaveObject& save_load_obj) : PoolingLayerT<TensorGPU, T>(save_load_obj) {};
+	PoolingLayer(typename Layer<TensorGPU,T>::ILoadSaveObject* save_load_obj) : PoolingLayerT<TensorGPU, T>(save_load_obj) {};
 	//virtual int Destroy();
 	virtual void Propagate(const TensorGPU<T>& input);
 	virtual void BackPropagate(const TensorGPU<T>& input, TensorGPU<T>& dedx_prev);
@@ -62,7 +62,7 @@ class PoolingLayer<TensorGPU,T>: public PoolingLayerT<TensorGPU, T>
 {
 public:
 	PoolingLayer(const typename PoolingLayerT<TensorGPU, T>::Params& params) : PoolingLayerT<TensorGPU, T>(params) { std::runtime_error("cudacnn lib compiled without CUDA support");};
-	PoolingLayer(typename Layer<TensorGPU,T>::ILoadSaveObject& save_load_obj) : PoolingLayerT<TensorGPU, T>(save_load_obj) 
+	PoolingLayer(typename Layer<TensorGPU,T>::ILoadSaveObject* save_load_obj) : PoolingLayerT<TensorGPU, T>(save_load_obj) 
 	{std::runtime_error("cudacnn lib compiled without CUDA support");};
 	//virtual int Destroy();
 	virtual void Propagate(const TensorGPU<T>& input){ std::runtime_error("cudacnn lib compiled without CUDA support");};

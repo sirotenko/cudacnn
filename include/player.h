@@ -31,7 +31,7 @@ class PoolingLayer<Tensor, T>: public PoolingLayerT<Tensor, T>
 {
 public:
 	PoolingLayer(const typename PoolingLayerT<Tensor, T>::Params& params) : PoolingLayerT<Tensor, T>(params) {};
-	PoolingLayer(typename Layer<Tensor,T>::ILoadSaveObject& save_load_obj) : PoolingLayerT<Tensor, T>(save_load_obj) {};
+	PoolingLayer(typename Layer<Tensor,T>::ILoadSaveObject* save_load_obj) : PoolingLayerT<Tensor, T>(save_load_obj) {};
 	virtual void Propagate(const Tensor<T>& input);
 	virtual void BackPropagate(const Tensor<T>& input, Tensor<T>& dedx_prev);
 	/* Backpropagate and accumulate Hessian. Before starting Hessian computation iterations,

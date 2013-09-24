@@ -261,7 +261,7 @@ mxArray* CNNetSaveToMatlab(cudacnn::CNNet<TT,T>& cnet, bool debug_save = false)
 		for(unsigned i = 0; i < cnet.nlayers(); ++i){
 			mxArray* layer_arr = mxCreateStructMatrix(1,1,0,NULL);
 			MatlabSaveLoad<TT,T> layer_save_obj(layer_arr);
-			cnet[i]->Save(layer_save_obj, debug_save);
+			cnet[i]->Save(&layer_save_obj, debug_save);
 			mxSetCell(layers_cell_arr,i,layer_arr);
 		}
 		mxAddField(struct_arr,"layers");

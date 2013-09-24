@@ -34,7 +34,7 @@ public:
     {
         cublasCheckMsg(cublasCreate(&cublas_handle_), "cublasCreate() error!\n");
     };
-	FLayer(typename Layer<TensorGPU,T>::ILoadSaveObject& save_load_obj) : 	FLayerT<TensorGPU, T, TF>(save_load_obj) {};
+	FLayer(typename Layer<TensorGPU,T>::ILoadSaveObject* save_load_obj) : 	FLayerT<TensorGPU, T, TF>(save_load_obj) {};
     virtual ~FLayer()
     {
         //cublasCheckMsg(cublasDestroy(cublas_handle_), "cublasDestroy() error!\n");
@@ -70,7 +70,7 @@ class FLayer<TensorGPU, T, TF>: public FLayerT<TensorGPU, T, TF>
 public:
 	FLayer(const TensorGPU<T>& weights, const TensorGPU<T>& tf_params, bool is_trainable) : FLayerT<TensorGPU, T, TF>(weights, tf_params, is_trainable)
     { std::runtime_error("cudacnn lib compiled without CUDA support");};
-	FLayer(typename Layer<TensorGPU,T>::ILoadSaveObject& save_load_obj) : 	FLayerT<TensorGPU, T, TF>(save_load_obj) 
+	FLayer(typename Layer<TensorGPU,T>::ILoadSaveObject* save_load_obj) : 	FLayerT<TensorGPU, T, TF>(save_load_obj) 
 	{std::runtime_error("cudacnn lib compiled without CUDA support");};
     virtual ~FLayer()
     { std::runtime_error("cudacnn lib compiled without CUDA support");};
