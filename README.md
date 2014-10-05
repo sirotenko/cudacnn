@@ -12,8 +12,8 @@ library][].
 
 Current features are:
 
--   Training methods: Stochastic gradient, \*\*Stochastic
-    Levenberg-Marquardt\*\*
+-   Training methods: Stochastic gradient, **Stochastic
+    Levenberg-Marquardt**
 -   Layers: Convolutional, Pooling (max, average), Fully-connected
 -   Transfer functions: Linear, Tansig, Tansig\_mod (variance normalized
     version of tansig)
@@ -41,7 +41,7 @@ steps:
 
 Very simple:
 
-*git clone <https://github.com/sirotenko/cudacnn.git> *
+*git clone <https://github.com/sirotenko/cudacnn.git>*
 
 This will clone the repository in current folder.
 
