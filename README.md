@@ -1,7 +1,7 @@
-# Warning #
+# Disclaimer #
 
-This library is quite old. And its not supported anymore due to lack of time. 
-Perhaps it's the first CUDA implementation of the ConvNets which was first hosted on MatlabCentral, then on Bitbucket. I've cloned it here just for the reference.
+This is to my knowledge the world's first CUDA/C++ implementation of ConvNets. The library first released in 2009 at MatlabCentral as a part of Matlab toolkit, then on Bitbucket.
+I put it here just for reference. It's not supported anymore. 
 
 Overview
 ========
